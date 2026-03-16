@@ -1,0 +1,11 @@
+{
+  "name": "financial-companion-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:backend": "npm install --prefix backend",
+    "dev": "npm --prefix backend run dev",
+    "start": "npm --prefix backend start"
+  }
+}
+
