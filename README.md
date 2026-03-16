@@ -56,10 +56,13 @@ Financial_Companion_App/
 - Added advisor escalation flows and structured guardrails for safe finance-related interactions
 - Integrated robust chat state management, conversation history capping, typing states, and inline error handling
 
-## Resume Bullets
+## Portfolio Highlights
 - Built a full-stack AI financial education assistant using vanilla JavaScript, Node.js, Express, and Groq, with secure server-side API integration and responsive single-page UX
 - Designed and implemented interactive chat workflows including suggested follow-up prompts, advisor escalation flows, typing states, and inline validation for a consumer-style onboarding experience
 - Developed a live SIP projection calculator with Indian number formatting, dynamic corpus breakdown, and visual returns versus invested allocation to support goal-based investing education
+
+## Live Demo
+Render URL: https://financial-companion-qeto.onrender.com/
 
 ## Key Engineering Decisions
 - Kept the frontend framework-free to reduce complexity and make the UI easy to deploy, review, and customize
@@ -95,3 +98,6 @@ Financial_Companion_App/
 - Keep `backend/.env` private and out of version control
 - Commit `backend/.env.example`, not the real `.env`
 - The backend serves the frontend, so this runs as one complete app
+
+
+
