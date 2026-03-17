@@ -1,4 +1,4 @@
-import path from "path";
+ï»¿import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
 import dotenv from "dotenv";
@@ -13,33 +13,35 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.3-70b-versatile";
-const SYSTEM_PROMPT = `You are the Financial Companion — a warm, knowledgeable, and patient financial assistant built for first-time investors in India.
+const NSE_BASE_URL = "https://www.nseindia.com";
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
+const SYSTEM_PROMPT = `You are the Financial Companion â€” a warm, knowledgeable, and patient financial assistant built for first-time investors in India.
 
 Your personality:
-- Friendly and approachable, like a knowledgeable friend — never formal or corporate
+- Friendly and approachable, like a knowledgeable friend â€” never formal or corporate
 - Use simple language. Avoid jargon. When you must use a financial term, always explain it immediately
 - Use Indian context always: rupees, Indian funds, SEBI, Indian tax rules (STCG/LTCG), Indian life goals
 - Keep responses concise but complete. Use short paragraphs. Use bullet points only when listing 3 or more items
 - Never lecture. Respond to exactly what was asked
 
 Your knowledge scope:
-- SIP (Systematic Investment Plan) — what it is, how it works, benefits of rupee cost averaging
-- Mutual funds — types (equity, debt, hybrid, liquid, index), how NAV works, how to read fund performance
-- Goal-based investing — retirement, child education, home purchase, emergency fund
-- Risk profiling — conservative, moderate, aggressive — how to think about risk based on timeline
-- Compounding — explain with simple rupee examples
-- SIP projections — when asked, calculate and show projected corpus using the formula: FV = P × [((1 + r)^n - 1) / r] × (1 + r) where P = monthly SIP amount, r = monthly interest rate (annual rate divided by 12 divided by 100), n = total number of months. Always show the result clearly with total invested and total returns broken out separately.
-- Indian tax rules — STCG at 15% for equity held under 1 year, LTCG at 12.5% above Rs 1.25 lakh for equity held over 1 year
-- KYC process — what it involves, Aadhaar and PAN verification, why it is required by SEBI
-- Index funds — what they are, why low expense ratio matters, Nifty 50 as the main Indian example
-- Emergency fund — why 3 to 6 months of expenses, where to keep it (liquid mutual funds)
+- SIP (Systematic Investment Plan) â€” what it is, how it works, benefits of rupee cost averaging
+- Mutual funds â€” types (equity, debt, hybrid, liquid, index), how NAV works, how to read fund performance
+- Goal-based investing â€” retirement, child education, home purchase, emergency fund
+- Risk profiling â€” conservative, moderate, aggressive â€” how to think about risk based on timeline
+- Compounding â€” explain with simple rupee examples
+- SIP projections â€” when asked, calculate and show projected corpus using the formula: FV = P Ã— [((1 + r)^n - 1) / r] Ã— (1 + r) where P = monthly SIP amount, r = monthly interest rate (annual rate divided by 12 divided by 100), n = total number of months. Always show the result clearly with total invested and total returns broken out separately.
+- Indian tax rules â€” STCG at 15% for equity held under 1 year, LTCG at 12.5% above Rs 1.25 lakh for equity held over 1 year
+- KYC process â€” what it involves, Aadhaar and PAN verification, why it is required by SEBI
+- Index funds â€” what they are, why low expense ratio matters, Nifty 50 as the main Indian example
+- Emergency fund â€” why 3 to 6 months of expenses, where to keep it (liquid mutual funds)
 
 Hard rules you must NEVER break:
 1. Never recommend a specific mutual fund by name. Never say things like "buy Axis Bluechip Fund" or "invest in HDFC Top 100".
 2. Never tell the user to buy or sell any specific investment or security.
 3. Never give specific tax advice. Always say "consult a tax professional for your specific situation" when tax questions arise.
 4. Always add this exact disclaimer when showing any projection or calculation: "These figures are illustrative only. Mutual fund investments are subject to market risk. Past performance does not guarantee future returns."
-5. If the user asks which specific fund to buy, ALWAYS respond with: "For specific fund recommendations tailored to your situation, I would recommend speaking with a SEBI-registered advisor. I can connect you with one through this platform — would you like me to?"
+5. If the user asks which specific fund to buy, ALWAYS respond with: "For specific fund recommendations tailored to your situation, I would recommend speaking with a SEBI-registered advisor. I can connect you with one through this platform â€” would you like me to?"
 6. Always identify yourself as an AI assistant if the user directly asks whether you are human or AI.
 
 When a user asks for a SIP calculation:
@@ -49,7 +51,7 @@ When a user asks for a SIP calculation:
 - Break down total amount invested versus total returns generated
 - Always add the projection disclaimer
 
-Escalation triggers — use this exact phrasing when any of these topics come up:
+Escalation triggers â€” use this exact phrasing when any of these topics come up:
 "This is a great question that deserves personalised advice. I would recommend connecting with a SEBI-registered advisor through this platform who can give you a recommendation based on your complete financial picture. Would you like me to set that up?"
 
 Trigger the above escalation response for:
@@ -67,6 +69,9 @@ Conversation style:
 - Keep responses under 250 words unless a detailed calculation or explanation is genuinely needed
 - Format numbers in Indian style: lakhs and crores, not millions and billions`;
 
+let nseCookies = "";
+let nseCookiesFetchedAt = 0;
+
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(frontendDir));
 
@@ -78,6 +83,275 @@ function sanitizeHistory(history) {
   return history
     .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
     .slice(-20);
+}
+
+function getBaseHeaders() {
+  return {
+    "user-agent": USER_AGENT,
+    accept: "application/json, text/plain, */*",
+    "accept-language": "en-US,en;q=0.9",
+    referer: `${NSE_BASE_URL}/`,
+    origin: NSE_BASE_URL
+  };
+}
+
+function extractCookies(response) {
+  if (typeof response.headers.getSetCookie === "function") {
+    return response.headers.getSetCookie().map((cookie) => cookie.split(";")[0]).join("; ");
+  }
+
+  const rawCookie = response.headers.get("set-cookie") || "";
+  const matches = rawCookie.match(/(?:^|,)\s*([^=;,\s]+=[^;]+)/g) || [];
+  return matches.map((item) => item.replace(/^,\s*/, "")).join("; ");
+}
+
+async function refreshNseCookies() {
+  const response = await fetch(`${NSE_BASE_URL}/`, {
+    headers: getBaseHeaders()
+  });
+
+  nseCookies = extractCookies(response);
+  nseCookiesFetchedAt = Date.now();
+}
+
+async function nseFetchJson(apiPath, retry = true) {
+  if (!nseCookies || Date.now() - nseCookiesFetchedAt > 10 * 60 * 1000) {
+    await refreshNseCookies();
+  }
+
+  const response = await fetch(`${NSE_BASE_URL}${apiPath}`, {
+    headers: {
+      ...getBaseHeaders(),
+      cookie: nseCookies
+    }
+  });
+
+  if ((response.status === 401 || response.status === 403) && retry) {
+    await refreshNseCookies();
+    return nseFetchJson(apiPath, false);
+  }
+
+  if (!response.ok) {
+    throw new Error(`NSE request failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function formatNumber(value) {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return null;
+  }
+  return numeric.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
+function looksLikeMarketDataQuery(message) {
+  return /(nifty|bank nifty|sensex|share price|stock price|market price|price of|quote of|current price|latest price|live price|market today|current market)/i.test(message);
+}
+
+function extractInstrumentRequest(message) {
+  const normalized = message.trim();
+  const lower = normalized.toLowerCase();
+
+  if (!looksLikeMarketDataQuery(lower)) {
+    return null;
+  }
+
+  if (lower.includes("bank nifty")) {
+    return { type: "index", indexName: "NIFTY BANK" };
+  }
+
+  if (lower.includes("nifty")) {
+    return { type: "index", indexName: "NIFTY 50" };
+  }
+
+  if (lower.includes("sensex")) {
+    return { type: "unsupported", label: "SENSEX" };
+  }
+
+  const patterns = [
+    /(?:price of|quote of|current price of|market price of|share price of|stock price of)\s+([a-z0-9&.\-\s]+)$/i,
+    /([a-z0-9&.\-\s]+?)\s+(?:share|stock)\s+price$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (match && match[1]) {
+      return { type: "equity", query: match[1].trim() };
+    }
+  }
+
+  return { type: "index", indexName: "NIFTY 50" };
+}
+
+async function fetchIndexSnapshot(indexName) {
+  const payload = await nseFetchJson("/api/allIndices");
+  const items = Array.isArray(payload.data) ? payload.data : [];
+  const target = items.find((item) => {
+    const names = [item.index, item.indexName, item.key, item.indexSymbol, item.symbol]
+      .filter(Boolean)
+      .map((value) => String(value).toUpperCase());
+    return names.includes(indexName.toUpperCase());
+  });
+
+  if (!target) {
+    return null;
+  }
+
+  return {
+    type: "index",
+    label: target.index || indexName,
+    lastPrice: target.last,
+    change: target.variation,
+    percentChange: target.percentChange,
+    open: target.open,
+    high: target.high,
+    low: target.low,
+    previousClose: target.previousClose,
+    lastUpdated: target.lastUpdateTime || target.timeVal || target.timestamp || ""
+  };
+}
+
+function normalizeSymbolCandidate(query) {
+  return query
+    .replace(/\b(share|stock|price|market|current|latest|live|today|limited|ltd|india)\b/gi, " ")
+    .replace(/[^a-z0-9&.\-\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function resolveEquitySymbol(query) {
+  const cleanedQuery = normalizeSymbolCandidate(query);
+  if (!cleanedQuery) {
+    return null;
+  }
+
+  try {
+    const payload = await nseFetchJson(`/api/search/autocomplete?q=${encodeURIComponent(cleanedQuery)}`);
+    const results = Array.isArray(payload.symbols) ? payload.symbols : Array.isArray(payload.data) ? payload.data : Array.isArray(payload) ? payload : [];
+
+    const preferred = results.find((item) => {
+      const blob = JSON.stringify(item).toUpperCase();
+      return blob.includes("NSE") && blob.includes("EQ");
+    }) || results[0];
+
+    const symbol = preferred && (preferred.symbol || preferred.symbolName || preferred.value || preferred.name);
+    if (symbol) {
+      return String(symbol).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+  } catch (_error) {
+    // Fall through to heuristics below if autocomplete is unavailable.
+  }
+
+  const collapsed = cleanedQuery.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (collapsed) {
+    return collapsed;
+  }
+
+  const firstWord = cleanedQuery.split(" ")[0];
+  return firstWord ? firstWord.toUpperCase() : null;
+}
+
+async function fetchEquitySnapshot(query) {
+  const symbol = await resolveEquitySymbol(query);
+  if (!symbol) {
+    return null;
+  }
+
+  const payload = await nseFetchJson(`/api/quote-equity?symbol=${encodeURIComponent(symbol)}`);
+  const priceInfo = payload.priceInfo || {};
+  const info = payload.info || {};
+  const metadata = payload.metadata || {};
+
+  if (!priceInfo.lastPrice && !metadata.lastPrice) {
+    return null;
+  }
+
+  return {
+    type: "equity",
+    label: info.companyName || metadata.symbol || symbol,
+    symbol,
+    lastPrice: priceInfo.lastPrice || metadata.lastPrice,
+    change: priceInfo.change,
+    percentChange: priceInfo.pChange,
+    open: priceInfo.open,
+    high: priceInfo.intraDayHighLow && priceInfo.intraDayHighLow.max,
+    low: priceInfo.intraDayHighLow && priceInfo.intraDayHighLow.min,
+    previousClose: priceInfo.previousClose,
+    lastUpdated: metadata.lastUpdateTime || ""
+  };
+}
+
+function buildMarketContext(snapshot) {
+  if (!snapshot) {
+    return "";
+  }
+
+  const lines = [
+    `Live market snapshot from NSE public market data:`,
+    `Instrument: ${snapshot.label}${snapshot.symbol ? ` (${snapshot.symbol})` : ""}`,
+    `Last price: Rs ${formatNumber(snapshot.lastPrice) || snapshot.lastPrice}`
+  ];
+
+  if (snapshot.change != null && snapshot.percentChange != null) {
+    lines.push(`Change: ${formatNumber(snapshot.change) || snapshot.change} (${snapshot.percentChange}%)`);
+  }
+  if (snapshot.open != null) {
+    lines.push(`Open: Rs ${formatNumber(snapshot.open) || snapshot.open}`);
+  }
+  if (snapshot.high != null) {
+    lines.push(`Day high: Rs ${formatNumber(snapshot.high) || snapshot.high}`);
+  }
+  if (snapshot.low != null) {
+    lines.push(`Day low: Rs ${formatNumber(snapshot.low) || snapshot.low}`);
+  }
+  if (snapshot.previousClose != null) {
+    lines.push(`Previous close: Rs ${formatNumber(snapshot.previousClose) || snapshot.previousClose}`);
+  }
+  if (snapshot.lastUpdated) {
+    lines.push(`Last updated: ${snapshot.lastUpdated}`);
+  }
+  lines.push(`Use these values exactly if the user asked for live prices. Mention that market prices can change quickly during market hours. If the user asks for personalised buy or sell advice, do not recommend a security and follow the advisor escalation rule.`);
+
+  return lines.join("\n");
+}
+
+async function maybeBuildMarketContext(userMessage) {
+  const request = extractInstrumentRequest(userMessage);
+  if (!request) {
+    return { context: "", note: "" };
+  }
+
+  if (request.type === "unsupported") {
+    return {
+      context: "",
+      note: `I can currently fetch live NSE prices and Nifty index snapshots, but I could not fetch ${request.label} in this version. Try asking for Nifty 50, Bank Nifty, or an NSE-listed stock price instead.`
+    };
+  }
+
+  try {
+    const snapshot = request.type === "index"
+      ? await fetchIndexSnapshot(request.indexName)
+      : await fetchEquitySnapshot(request.query);
+
+    if (!snapshot) {
+      return {
+        context: "",
+        note: "I could not fetch that live market price right now. Please try again in a moment, or ask for Nifty 50 or a listed NSE stock by name."
+      };
+    }
+
+    return {
+      context: buildMarketContext(snapshot),
+      note: ""
+    };
+  } catch (_error) {
+    return {
+      context: "",
+      note: "I could not fetch live market data right now. Please try again in a moment."
+    };
+  }
 }
 
 app.get("/api/health", (_req, res) => {
@@ -97,6 +371,20 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "Please send a message before calling the AI backend." });
   }
 
+  const marketInfo = await maybeBuildMarketContext(userMessage);
+  if (looksLikeMarketDataQuery(userMessage) && marketInfo.note) {
+    return res.json({ message: marketInfo.note });
+  }
+
+  const messages = [{ role: "system", content: SYSTEM_PROMPT }];
+  if (marketInfo.context) {
+    messages.push({
+      role: "system",
+      content: marketInfo.context
+    });
+  }
+  messages.push(...conversationHistory);
+
   try {
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
@@ -107,10 +395,7 @@ app.post("/api/chat", async (req, res) => {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1024,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...conversationHistory
-        ]
+        messages
       })
     });
 
@@ -148,4 +433,3 @@ app.get("*", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Financial Companion server running on http://localhost:${PORT}`);
 });
-

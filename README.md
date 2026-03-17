@@ -1,4 +1,4 @@
-﻿# Financial Companion AI
+# Financial Companion AI
 
 A polished full-stack financial education chatbot built for first-time investors in India. The app explains SIPs, mutual funds, taxation basics, risk profiles, emergency funds, and goal-based investing in simple language, while escalating personalised recommendation requests to a registered advisor.
 
@@ -6,6 +6,7 @@ A polished full-stack financial education chatbot built for first-time investors
 - Conversational single-page interface with responsive desktop and mobile layouts
 - Context sidebar with sample investor profile, goals, and quick topics
 - AI-powered chat backed by Groq with a secure server-side API key setup
+- Live NSE market snapshots for Nifty, Bank Nifty, and NSE-listed stock price queries
 - Inline SIP projection calculator with live updates and Indian number formatting
 - Suggested follow-up question chips under assistant replies
 - Advisor escalation card for recommendation-style queries
@@ -16,19 +17,20 @@ A polished full-stack financial education chatbot built for first-time investors
 - Frontend: HTML, CSS, vanilla JavaScript
 - Backend: Node.js, Express
 - AI model: Groq `llama-3.3-70b-versatile`
+- Market data: NSE public market endpoints
 
 ## Project Structure
 ```text
 Financial_Companion_App/
-├── frontend/
-│   └── index.html
-├── backend/
-│   ├── .env.example
-│   ├── package.json
-│   └── server.js
-├── .gitignore
-├── package.json
-└── README.md
++-- frontend/
+�   +-- index.html
++-- backend/
+�   +-- .env.example
+�   +-- package.json
+�   +-- server.js
++-- .gitignore
++-- package.json
++-- README.md
 ```
 
 ## Local Setup
@@ -54,12 +56,14 @@ Financial_Companion_App/
 - Designed a responsive conversational UI with mobile drawer navigation, starter prompts, and follow-up suggestions
 - Implemented an inline SIP calculator with real-time corpus, invested amount, and returns visualization
 - Added advisor escalation flows and structured guardrails for safe finance-related interactions
+- Integrated live market context for Nifty and stock-price questions using NSE data before AI response generation
 - Integrated robust chat state management, conversation history capping, typing states, and inline error handling
 
 ## Portfolio Highlights
 - Built a full-stack AI financial education assistant using vanilla JavaScript, Node.js, Express, and Groq, with secure server-side API integration and responsive single-page UX
 - Designed and implemented interactive chat workflows including suggested follow-up prompts, advisor escalation flows, typing states, and inline validation for a consumer-style onboarding experience
 - Developed a live SIP projection calculator with Indian number formatting, dynamic corpus breakdown, and visual returns versus invested allocation to support goal-based investing education
+- Added server-side live market enrichment for Nifty and NSE stock queries so the assistant can answer with current price context instead of relying only on static model knowledge
 
 ## Live Demo
 Render URL: https://financial-companion-qeto.onrender.com/
@@ -67,6 +71,7 @@ Render URL: https://financial-companion-qeto.onrender.com/
 ## Key Engineering Decisions
 - Kept the frontend framework-free to reduce complexity and make the UI easy to deploy, review, and customize
 - Moved all model access to the backend so the Groq API key never appears in client-side code
+- Pulled live market snapshots on the backend so current-price answers stay grounded in fresh NSE data
 - Capped conversation history before each request to control token usage and keep responses fast
 - Used a keyword-triggered calculator flow so educational projections appear inline without breaking the chat experience
 - Added deterministic escalation handling for recommendation-style queries to keep the product safer and more realistic for finance use cases
@@ -98,6 +103,8 @@ Render URL: https://financial-companion-qeto.onrender.com/
 - Keep `backend/.env` private and out of version control
 - Commit `backend/.env.example`, not the real `.env`
 - The backend serves the frontend, so this runs as one complete app
+
+
 
 
 
