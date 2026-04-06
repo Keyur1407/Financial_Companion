@@ -763,7 +763,8 @@ async function maybeBuildMarketContext(userMessage) {
       note: "",
       marketData
     };
-  } catch (_error) {
+  } catch (error) {
+    console.error("[market] Failed to build market context:", error);
     return {
       context: "",
       note: "I could not fetch live market data right now. Please try again in a moment.",
