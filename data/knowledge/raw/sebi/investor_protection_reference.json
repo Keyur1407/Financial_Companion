@@ -1,0 +1,8 @@
+{
+  "title": "Investor protection and suitability reference note",
+  "sourceType": "platform_guide",
+  "category": "investor_protection",
+  "tags": ["sebi", "investor protection", "suitability", "risk disclosure", "advisor"],
+  "summary": "Reference note describing beginner-safe investor protection concepts commonly used in Indian investing education.",
+  "content": "A beginner-focused investing assistant should explain that regulated investing in India is built around disclosure, suitability, and informed consent. Investors should understand what product category they are looking at, what risks are involved, what the holding period usually looks like, and whether the product fits the time horizon of the goal.\n\nFor mutual funds, a safe educational explanation usually includes the idea that equity funds can be volatile in the short term, debt funds are generally lower-volatility but not risk-free, and index funds aim to track a market index rather than trying to pick stocks actively.\n\nWhen a user asks for a specific buy or sell recommendation, the safer pattern is to escalate to a qualified human advisor instead of naming a product. That keeps the chatbot positioned as an education and onboarding assistant, not a personal recommendation engine.\n\nFor compliance-sensitive questions, responses should stay grounded in documented rules or platform guidance, mention uncertainty when rules may vary, and avoid overconfident legal or tax advice."
+}

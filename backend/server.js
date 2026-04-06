@@ -2,6 +2,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
 import dotenv from "dotenv";
+import { classifyQuery, isMarketQuery } from "./services/queryRouter.js";
+import { retrieveKnowledgeContext } from "./services/rag/retrievalService.js";
 
 dotenv.config();
 
@@ -12,37 +14,40 @@ const frontendDir = path.resolve(__dirname, "../frontend");
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "openai/gpt-oss-120b";
 const NSE_BASE_URL = "https://www.nseindia.com";
+const BSE_BASE_URL = "https://www.bseindia.com";
+const BSE_REALTIME_API_BASE_URL = "https://api.bseindia.com/RealTimeBseIndiaAPI/api";
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
-const SYSTEM_PROMPT = `You are the Financial Companion — a warm, knowledgeable, and patient financial assistant built for first-time investors in India.
+const NSE_FETCH_TIMEOUT_MS = Number(process.env.NSE_FETCH_TIMEOUT_MS) || 12000;
+const DEBUG_MARKET_FETCH = process.env.DEBUG_MARKET_FETCH === "1";
+const SYSTEM_PROMPT = `You are the Financial Companion - a warm, knowledgeable, and patient financial assistant built for first-time investors in India.
 
 Your personality:
-- Friendly and approachable, like a knowledgeable friend — never formal or corporate
+- Friendly and approachable, like a knowledgeable friend - never formal or corporate
 - Use simple language. Avoid jargon. When you must use a financial term, always explain it immediately
 - Use Indian context always: rupees, Indian funds, SEBI, Indian tax rules (STCG/LTCG), Indian life goals
-- Keep responses concise but complete. Use short paragraphs. Use bullet points only when listing 3 or more items
+- Keep responses concise but complete. Use short paragraphs. Use bullet points only when listing 3 or more items. For beginner process or "how to start" questions, use 3 to 6 numbered steps with short descriptions and optional short bullet sub-points. For concept-explainer questions like SIP, mutual funds, or index funds, prefer a short definition followed by 2 to 4 labeled bullets such as "How it works", "Why it helps", or "When it fits".
+- When showing a formula, first write it in readable plain text such as "CAGR = (Final Value / Initial Value)^(1 / n) - 1". If you also include math notation, wrap inline math in "\\(...\\)" and display math in "$$...$$". Never output raw LaTeX commands without delimiters.
 - Never lecture. Respond to exactly what was asked
 
 Your knowledge scope:
-- SIP (Systematic Investment Plan) — what it is, how it works, benefits of rupee cost averaging
-- Mutual funds — types (equity, debt, hybrid, liquid, index), how NAV works, how to read fund performance
-- Goal-based investing — retirement, child education, home purchase, emergency fund
-- Risk profiling — conservative, moderate, aggressive — how to think about risk based on timeline
-- Compounding — explain with simple rupee examples
-- SIP projections — when asked, calculate and show projected corpus using the formula: FV = P × [((1 + r)^n - 1) / r] × (1 + r) where P = monthly SIP amount, r = monthly interest rate (annual rate divided by 12 divided by 100), n = total number of months. Always show the result clearly with total invested and total returns broken out separately.
-- Indian tax rules — STCG at 15% for equity held under 1 year, LTCG at 12.5% above Rs 1.25 lakh for equity held over 1 year
-- KYC process — what it involves, Aadhaar and PAN verification, why it is required by SEBI
-- Index funds — what they are, why low expense ratio matters, Nifty 50 as the main Indian example
-- Emergency fund — why 3 to 6 months of expenses, where to keep it (liquid mutual funds)
+- SIP (Systematic Investment Plan) - what it is, how it works, benefits of rupee cost averaging
+- Mutual funds - types (equity, debt, hybrid, liquid, index), how NAV works, how to read fund performance
+- Goal-based investing - retirement, child education, home purchase, emergency fund
+- Risk profiling - conservative, moderate, aggressive - how to think about risk based on timeline
+- Compounding - explain with simple rupee examples
+- SIP projections - when asked, calculate and show projected corpus using the formula: FV = P x [((1 + r)^n - 1) / r] x (1 + r) where P = monthly SIP amount, r = monthly interest rate (annual rate divided by 12 divided by 100), n = total number of months. Always show the result clearly with total invested and total returns broken out separately.
+- Indian tax rules - STCG at 15% for equity held under 1 year, LTCG at 12.5% above Rs 1.25 lakh for equity held over 1 year
+- KYC process - what it involves, Aadhaar and PAN verification, why it is required by SEBI
+- Index funds - what they are, why low expense ratio matters, Nifty 50 as the main Indian example
+- Emergency fund - why 3 to 6 months of expenses, where to keep it (liquid mutual funds)
 
 Hard rules you must NEVER break:
-1. Never recommend a specific mutual fund by name. Never say things like "buy Axis Bluechip Fund" or "invest in HDFC Top 100".
-2. Never tell the user to buy or sell any specific investment or security.
-3. Never give specific tax advice. Always say "consult a tax professional for your specific situation" when tax questions arise.
-4. Always add this exact disclaimer when showing any projection or calculation: "These figures are illustrative only. Mutual fund investments are subject to market risk. Past performance does not guarantee future returns."
-5. If the user asks which specific fund to buy, ALWAYS respond with: "For specific fund recommendations tailored to your situation, I would recommend speaking with a SEBI-registered advisor. I can connect you with one through this platform — would you like me to?"
-6. Always identify yourself as an AI assistant if the user directly asks whether you are human or AI.
+1. Always add this exact disclaimer when showing any projection or calculation: "These figures are illustrative only. Mutual fund investments are subject to market risk. Past performance does not guarantee future returns."
+2. Always identify yourself as an AI assistant if the user directly asks whether you are human or AI.
+3. For stock or index questions, you may provide a structured market view such as bullish intraday bias, bearish intraday bias, or neutral/range-bound, along with catalysts, risks, support, resistance, and levels to watch. Never turn that analysis into a direct action recommendation.
+4. End every response about a specific stock, share, or index with this exact line: "This is informational analysis based on publicly available market data, not a personalised buy or sell recommendation."
 
 When a user asks for a SIP calculation:
 - Ask for monthly SIP amount, duration in years, and expected return rate if not provided
@@ -51,27 +56,50 @@ When a user asks for a SIP calculation:
 - Break down total amount invested versus total returns generated
 - Always add the projection disclaimer
 
-Escalation triggers — use this exact phrasing when any of these topics come up:
-"This is a great question that deserves personalised advice. I would recommend connecting with a SEBI-registered advisor through this platform who can give you a recommendation based on your complete financial picture. Would you like me to set that up?"
-
-Trigger the above escalation response for:
-- Questions asking which specific fund to buy or invest in
-- Questions asking whether to switch or move existing investments
-- Questions asking whether a specific fund is good for them personally
-- Any question that implies a specific buy, sell, or switch recommendation
-- Questions like "what should I do with my money" seeking a direct personal recommendation
 
 Conversation style:
 - Start responses with a direct answer to what was asked. Never start with filler phrases like "Great question!" or "Absolutely!" or "Certainly!"
 - Use the Rs or rupee symbol for all amounts
 - Give concrete examples with numbers. For example: "If you invest Rs 5,000 per month for 10 years at 12 percent per annum, you would accumulate approximately Rs 11.6 lakhs"
 - For live market questions, use the system-provided market snapshot exactly and explain the move, the day range, and key levels to watch in 2 to 4 short paragraphs
+- For stock or index analysis questions, prefer this structure when helpful: current read, bullish signals, bearish signals, and what to watch next
+- Neutral conclusions are allowed. Use phrases like "bullish intraday bias", "bearish intraday bias", "range-bound setup", "watchlist candidate", "research further", or "high-risk setup" when justified by the provided data
+- If news context is available from the system, cite it as part of the reasoning. If it is not available, say the read is based mainly on price action and the provided market snapshot
+- Formatting rules: use only plain paragraphs, **bold** text, numbered lists like 1. 2. 3., and bullet lists starting with -
+- Never use markdown tables, pipe-separated comparison grids, raw HTML tags like <br>, or markdown headings that start with #
+- If you need to compare options, convert the comparison into labeled bullets or short paragraphs instead of a table
+- If retrieved knowledge-base context is provided, prefer it for guideline, compliance, or news-summary questions and do not present unsupported claims as fresh facts
 - End longer responses with a natural follow-up question to keep the conversation going
 - Keep responses under 250 words unless a detailed calculation or explanation is genuinely needed
 - Format numbers in Indian style: lakhs and crores, not millions and billions`;
 
+
+// Recommendation Prompt
+// Escalation triggers - use this exact phrasing when any of these topics come up:
+// "This is a great question that deserves personalised advice. I would recommend connecting with a SEBI-registered advisor through this platform who can give you a recommendation based on your complete financial picture. Would you like me to set that up?"
+
+// Trigger the above escalation response for:
+// - Questions asking which specific fund to buy or invest in
+// - Questions asking whether to switch or move existing investments
+// - Questions asking whether a specific fund is good for them personally
+// - Any question that implies a specific buy, sell, or switch recommendation
+// - Questions like "what should I do with my money" seeking a direct personal recommendation
+
+
 let nseCookies = "";
 let nseCookiesFetchedAt = 0;
+
+const DEFAULT_SUGGESTED_QUESTIONS = [
+  "How should I start investing as a beginner?",
+  "What is SIP in simple language?",
+  "How much should I invest every month?"
+];
+
+const MARKET_SUGGESTED_QUESTIONS = [
+  "What is Bank Nifty today?",
+  "What are the bullish and bearish signals here?",
+  "What levels should I watch next?"
+];
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(frontendDir));
@@ -86,13 +114,152 @@ function sanitizeHistory(history) {
     .slice(-20);
 }
 
+function sanitizeSuggestedQuestion(question) {
+  if (typeof question !== "string") {
+    return "";
+  }
+
+  const cleaned = question.replace(/\s+/g, " ").trim();
+  if (!cleaned || cleaned.length < 8 || cleaned.length > 120) {
+    return "";
+  }
+
+  return /\?$/.test(cleaned) ? cleaned : `${cleaned}?`;
+}
+
+function buildFallbackSuggestedQuestions(userMessage, marketData) {
+  if (marketData || looksLikeMarketDataQuery(userMessage)) {
+    return MARKET_SUGGESTED_QUESTIONS.slice(0, 3);
+  }
+
+  return DEFAULT_SUGGESTED_QUESTIONS.slice(0, 3);
+}
+
+function normalizeSuggestedQuestions(questions, fallbackQuestions) {
+  const normalized = [];
+  const seen = new Set();
+
+  const source = Array.isArray(questions) ? questions : [];
+  for (const candidate of source) {
+    const cleaned = sanitizeSuggestedQuestion(candidate);
+    const key = cleaned.toLowerCase();
+    if (!cleaned || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push(cleaned);
+    if (normalized.length === 3) {
+      break;
+    }
+  }
+
+  for (const candidate of fallbackQuestions) {
+    const cleaned = sanitizeSuggestedQuestion(candidate);
+    const key = cleaned.toLowerCase();
+    if (!cleaned || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push(cleaned);
+    if (normalized.length === 3) {
+      break;
+    }
+  }
+
+  return normalized.slice(0, 3);
+}
+
+function tryParseJsonObject(text) {
+  if (typeof text !== "string") {
+    return null;
+  }
+
+  const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : text.trim();
+
+  try {
+    return JSON.parse(candidate);
+  } catch (_error) {
+    const objectMatch = candidate.match(/\{[\s\S]*\}/);
+    if (!objectMatch) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(objectMatch[0]);
+    } catch (_innerError) {
+      return null;
+    }
+  }
+}
+
+async function generateSuggestedQuestions(apiKey, userMessage, assistantMessage, marketData) {
+  const fallbackQuestions = buildFallbackSuggestedQuestions(userMessage, marketData);
+  const marketLabel = marketData && marketData.label ? marketData.label : "";
+
+  try {
+    const response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 180,
+        messages: [
+          {
+            role: "system",
+            content: "You generate exactly 3 short follow-up questions for a financial education chatbot. Keep them specific to the assistant reply, beginner-friendly, non-repetitive, and free of direct buy/sell recommendations. Return valid JSON only in this shape: {\"suggestedQuestions\":[\"...\",\"...\",\"...\"]}."
+          },
+          {
+            role: "user",
+            content: `User question: ${userMessage}\nAssistant reply: ${assistantMessage}\nLive market instrument: ${marketLabel || "none"}\nGenerate 3 natural follow-up questions.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      return fallbackQuestions;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const rawContent = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    const parsed = tryParseJsonObject(rawContent);
+    return normalizeSuggestedQuestions(parsed && parsed.suggestedQuestions, fallbackQuestions);
+  } catch (_error) {
+    return fallbackQuestions;
+  }
+}
+
+function logMarketDebug(...parts) {
+  if (DEBUG_MARKET_FETCH) {
+    console.log("[market]", ...parts);
+  }
+}
+
 function getBaseHeaders() {
   return {
     "user-agent": USER_AGENT,
     accept: "application/json, text/plain, */*",
     "accept-language": "en-US,en;q=0.9",
+    "cache-control": "no-cache",
+    pragma: "no-cache",
     referer: `${NSE_BASE_URL}/`,
     origin: NSE_BASE_URL
+  };
+}
+
+function getBseHeaders() {
+  return {
+    "user-agent": USER_AGENT,
+    accept: "application/json, text/plain, */*",
+    "accept-language": "en-US,en;q=0.9",
+    "cache-control": "no-cache",
+    pragma: "no-cache",
+    referer: `${BSE_BASE_URL}/`,
+    origin: BSE_BASE_URL
   };
 }
 
@@ -106,13 +273,42 @@ function extractCookies(response) {
   return matches.map((item) => item.replace(/^,\s*/, "")).join("; ");
 }
 
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), NSE_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new Error(`Request timed out after ${NSE_FETCH_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function refreshNseCookies() {
-  const response = await fetch(`${NSE_BASE_URL}/`, {
+  logMarketDebug("Refreshing NSE cookies");
+  const response = await fetchWithTimeout(`${NSE_BASE_URL}/`, {
     headers: getBaseHeaders()
   });
 
+  if (!response.ok) {
+    throw new Error(`NSE cookie bootstrap failed with status ${response.status}`);
+  }
+
   nseCookies = extractCookies(response);
+  if (!nseCookies) {
+    throw new Error("NSE cookie bootstrap failed because no cookies were returned");
+  }
+
   nseCookiesFetchedAt = Date.now();
+  logMarketDebug("NSE cookies refreshed", `length=${nseCookies.length}`);
 }
 
 async function nseFetchJson(apiPath, retry = true) {
@@ -120,7 +316,8 @@ async function nseFetchJson(apiPath, retry = true) {
     await refreshNseCookies();
   }
 
-  const response = await fetch(`${NSE_BASE_URL}${apiPath}`, {
+  logMarketDebug("Fetching NSE API", apiPath);
+  const response = await fetchWithTimeout(`${NSE_BASE_URL}${apiPath}`, {
     headers: {
       ...getBaseHeaders(),
       cookie: nseCookies
@@ -128,12 +325,14 @@ async function nseFetchJson(apiPath, retry = true) {
   });
 
   if ((response.status === 401 || response.status === 403) && retry) {
+    logMarketDebug("NSE API returned auth status, retrying with fresh cookies", response.status);
     await refreshNseCookies();
     return nseFetchJson(apiPath, false);
   }
 
   if (!response.ok) {
-    throw new Error(`NSE request failed with status ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`NSE request failed for ${apiPath} with status ${response.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
   }
 
   return response.json();
@@ -162,12 +361,18 @@ function clamp(value, min, max) {
 }
 
 function looksLikeMarketDataQuery(message) {
-  return /(nifty|bank nifty|sensex|share price|stock price|market price|price of|quote of|current price|latest price|live price|market today|current market)/i.test(message);
+  return isMarketQuery(message);
+}
+
+function isGenericMarketOverviewQuery(message) {
+  const lower = typeof message === "string" ? message.toLowerCase() : "";
+  return /(market today|current market|how is the market|what is the market doing|market trend|market outlook|market sentiment|market direction|market summary|today'?s market summary|daily market summary|market recap|market wrap|summari[sz]e (?:today'?s )?market|how did the market do today|how was the market today|what happened in the market today|what is driving the market|what's driving the market|drivers of the market|market themes|news themes|market news)/i.test(lower);
 }
 
 function extractInstrumentRequest(message) {
   const normalized = message.trim();
   const lower = normalized.toLowerCase();
+  const normalizedForPatternMatch = normalized.replace(/[?!.,:;]+$/g, "").trim();
 
   if (!looksLikeMarketDataQuery(lower)) {
     return null;
@@ -182,25 +387,68 @@ function extractInstrumentRequest(message) {
   }
 
   if (lower.includes("sensex")) {
-    return { type: "unsupported", label: "SENSEX" };
+    return { type: "index", indexName: "SENSEX" };
   }
 
   const patterns = [
     /(?:price of|quote of|current price of|market price of|share price of|stock price of)\s+([a-z0-9&.\-\s]+)$/i,
-    /([a-z0-9&.\-\s]+?)\s+(?:share|stock)\s+price$/i
+    /([a-z0-9&.\-\s]+?)\s+(?:share|stock)\s+price$/i,
+    /(?:analy[sz]e|analysis of|outlook for|view on|thoughts on|trend for|setup for|support and resistance for|support for|resistance for|bullish on|bearish on)\s+([a-z0-9&.\-\s]+?)(?:\s+(?:share|stock))?(?:\s+(?:today|now|right now|currently))?$/i,
+    /([a-z0-9&.\-\s]+?)\s+(?:stock|share)\s+(?:analysis|outlook|trend|setup)$/i,
+    /(?:is|how is)\s+([a-z0-9&.\-\s]+?)(?:\s+(?:share|stock))?\s+(?:bullish|bearish|looking|trading|doing|moving)(?:\s+(?:today|now|right now|currently))?$/i
   ];
 
   for (const pattern of patterns) {
-    const match = normalized.match(pattern);
+    const match = normalizedForPatternMatch.match(pattern);
     if (match && match[1]) {
       return { type: "equity", query: match[1].trim() };
     }
   }
 
-  return { type: "index", indexName: "NIFTY 50" };
+  if (isGenericMarketOverviewQuery(lower)) {
+    return { type: "index", indexName: "NIFTY 50" };
+  }
+
+  return null;
+}
+
+async function fetchSensexSnapshot() {
+  logMarketDebug("Fetching BSE API", "/GetSensexData/w");
+  const response = await fetchWithTimeout(`${BSE_REALTIME_API_BASE_URL}/GetSensexData/w`, {
+    headers: getBseHeaders()
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`BSE request failed for /GetSensexData/w with status ${response.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
+  }
+
+  const payload = await response.json().catch(() => []);
+  const target = Array.isArray(payload) ? payload[0] : null;
+  if (!target) {
+    return null;
+  }
+
+  return {
+    type: "index",
+    label: "BSE SENSEX",
+    marketSource: "BSE",
+    lastPrice: target.ltp,
+    change: target.chg,
+    percentChange: target.perchg,
+    open: target.I_open,
+    high: target.High,
+    low: target.Low,
+    previousClose: target.Prev_Close,
+    lastUpdated: target.dttm || ""
+  };
 }
 
 async function fetchIndexSnapshot(indexName) {
+  if (String(indexName || "").toUpperCase() === "SENSEX") {
+    return fetchSensexSnapshot();
+  }
+
   const payload = await nseFetchJson("/api/allIndices");
   const items = Array.isArray(payload.data) ? payload.data : [];
   const target = items.find((item) => {
@@ -217,6 +465,7 @@ async function fetchIndexSnapshot(indexName) {
   return {
     type: "index",
     label: target.index || indexName,
+    marketSource: "NSE",
     lastPrice: target.last,
     change: target.variation,
     percentChange: target.percentChange,
@@ -287,6 +536,7 @@ async function fetchEquitySnapshot(query) {
     type: "equity",
     label: info.companyName || metadata.symbol || symbol,
     symbol,
+    marketSource: "NSE",
     lastPrice: priceInfo.lastPrice || metadata.lastPrice,
     change: priceInfo.change,
     percentChange: priceInfo.pChange,
@@ -438,8 +688,9 @@ function buildMarketContext(snapshot, marketData) {
     return "";
   }
 
+  const marketSourceLabel = snapshot.marketSource ? `${snapshot.marketSource} public market data` : "public market data";
   const lines = [
-    "Live market snapshot from NSE public market data:",
+    `Live market snapshot from ${marketSourceLabel}:`,
     `Instrument: ${snapshot.label}${snapshot.symbol ? ` (${snapshot.symbol})` : ""}`,
     `Last price: Rs ${formatNumber(snapshot.lastPrice) || snapshot.lastPrice}`,
     `Trend label: ${marketData.trendLabel}`,
@@ -465,22 +716,32 @@ function buildMarketContext(snapshot, marketData) {
     lines.push(`Last updated: ${snapshot.lastUpdated}`);
   }
 
-  lines.push("Use these values exactly if the user asked for live prices. Mention that market prices can change quickly during market hours. Do not invent technical indicators that were not provided. If the user asks for personalised buy or sell advice, do not recommend a security and follow the advisor escalation rule.");
+  lines.push("Use these values exactly if the user asked for live prices. Mention that market prices can change quickly during market hours. Do not invent technical indicators that were not provided. You may give a neutral market view such as bullish intraday bias, bearish intraday bias, range-bound setup, watchlist candidate, research further, or high-risk setup if it is clearly supported by the provided data. Do not convert that view into a buy, sell, entry, exit, target, or stop-loss instruction. If the user asks for personalised buy or sell advice, do not recommend a security and follow the advisor escalation rule. End stock and index analysis with the required informational-analysis disclaimer.");
   return lines.join("\n");
+}
+
+function buildMissingNewsContextMessage(routeInfo, marketData, marketNote = "") {
+  if (routeInfo.route === "hybrid_market_summary") {
+    if (marketData && marketData.label) {
+      return `${marketData.label} live data is available in the card above, but I do not have fresh market-news context loaded right now for a reliable full market summary. I can explain the index move and key levels from the live snapshot, but I should not guess about today's main drivers without recent news documents.`;
+    }
+
+    if (marketNote) {
+      return `I could not fetch live market data right now, and I also do not have fresh market-news context loaded in the app. That means I cannot produce a reliable market summary for today without guessing. Please try again in a moment, or add recent market-news documents to the knowledge base.`;
+    }
+  }
+
+  if (routeInfo.route === "hybrid_market_news" && marketData && marketData.label) {
+    return `${marketData.label} live data is available in the card above, but I do not have fresh news context loaded right now for a reliable summary of the latest market themes. I would rather not guess. Once recent market-news items are added to the app knowledge base, I can group them into clear themes and explain what is driving the move.`;
+  }
+
+  return "I can summarise the latest market news themes only when recent news context has been loaded into this app. I do not have fresh news documents available right now, so I would rather not guess. Once recent market-news items are added to the knowledge base, I can group them into themes like rates, liquidity, earnings, and sector rotation in a much more useful way.";
 }
 
 async function maybeBuildMarketContext(userMessage) {
   const request = extractInstrumentRequest(userMessage);
   if (!request) {
     return { context: "", note: "", marketData: null };
-  }
-
-  if (request.type === "unsupported") {
-    return {
-      context: "",
-      note: `I can currently fetch live NSE prices and Nifty index snapshots, but I could not fetch ${request.label} in this version. Try asking for Nifty 50, Bank Nifty, or an NSE-listed stock price instead.`,
-      marketData: null
-    };
   }
 
   try {
@@ -491,7 +752,7 @@ async function maybeBuildMarketContext(userMessage) {
     if (!snapshot) {
       return {
         context: "",
-        note: "I could not fetch that live market price right now. Please try again in a moment, or ask for Nifty 50 or a listed NSE stock by name.",
+        note: "I could not fetch that live market price right now. Please try again in a moment, or ask for Nifty 50, Sensex, or a listed NSE stock by name.",
         marketData: null
       };
     }
@@ -523,19 +784,98 @@ app.post("/api/chat", async (req, res) => {
 
   const userMessage = typeof req.body.userMessage === "string" ? req.body.userMessage.trim() : "";
   const conversationHistory = sanitizeHistory(req.body.conversationHistory);
+  const routeInfo = classifyQuery(userMessage);
 
   if (!userMessage) {
     return res.status(400).json({ error: "Please send a message before calling the AI backend." });
   }
 
-  const marketInfo = await maybeBuildMarketContext(userMessage);
-  if (looksLikeMarketDataQuery(userMessage) && marketInfo.note) {
-    return res.json({ message: marketInfo.note, marketData: marketInfo.marketData });
+  const marketInfo = routeInfo.useMarketData
+    ? await maybeBuildMarketContext(userMessage)
+    : { context: "", note: "", marketData: null };
+  const retrievalInfo = routeInfo.useKnowledgeRetrieval
+    ? await retrieveKnowledgeContext(userMessage, routeInfo)
+    : { context: "", sources: [], matches: [] };
+
+  const isHybridMarketRoute = routeInfo.route === "hybrid_market_news" || routeInfo.route === "hybrid_market_summary";
+  const shouldReturnMarketFailureImmediately = routeInfo.route === "live_market" || routeInfo.route === "stock_analysis";
+
+  if (routeInfo.isMarketQuery && marketInfo.note && shouldReturnMarketFailureImmediately) {
+    const suggestedQuestions = await generateSuggestedQuestions(apiKey, userMessage, marketInfo.note, marketInfo.marketData);
+    return res.json({
+      message: marketInfo.note,
+      marketData: marketInfo.marketData,
+      suggestedQuestions,
+      retrievedSources: retrievalInfo.sources,
+      route: routeInfo.route
+    });
+  }
+
+  if (routeInfo.route === "news_rag" && !retrievalInfo.sources.length) {
+    const missingNewsMessage = buildMissingNewsContextMessage(routeInfo, marketInfo.marketData, marketInfo.note);
+    const suggestedQuestions = await generateSuggestedQuestions(apiKey, userMessage, missingNewsMessage, marketInfo.marketData);
+    return res.json({
+      message: missingNewsMessage,
+      marketData: marketInfo.marketData,
+      suggestedQuestions,
+      retrievedSources: [],
+      route: routeInfo.route
+    });
+  }
+
+  if (routeInfo.route === "hybrid_market_news" && !retrievalInfo.sources.length) {
+    const missingNewsMessage = buildMissingNewsContextMessage(routeInfo, marketInfo.marketData, marketInfo.note);
+    const suggestedQuestions = await generateSuggestedQuestions(apiKey, userMessage, missingNewsMessage, marketInfo.marketData);
+    return res.json({
+      message: missingNewsMessage,
+      marketData: marketInfo.marketData,
+      suggestedQuestions,
+      retrievedSources: [],
+      route: routeInfo.route
+    });
+  }
+
+  if (routeInfo.route === "hybrid_market_summary" && !retrievalInfo.sources.length && !marketInfo.marketData) {
+    const missingSummaryMessage = buildMissingNewsContextMessage(routeInfo, marketInfo.marketData, marketInfo.note);
+    const suggestedQuestions = await generateSuggestedQuestions(apiKey, userMessage, missingSummaryMessage, marketInfo.marketData);
+    return res.json({
+      message: missingSummaryMessage,
+      marketData: marketInfo.marketData,
+      suggestedQuestions,
+      retrievedSources: [],
+      route: routeInfo.route
+    });
   }
 
   const messages = [{ role: "system", content: SYSTEM_PROMPT }];
+  if (routeInfo.route === "hybrid_market_summary") {
+    messages.push({
+      role: "system",
+      content: "The user wants a market summary for today. If both live market data and retrieved news context are available, combine them into a concise summary covering index move, major drivers, sector tone, and what to watch. If only live market data is available, give a price-led market summary and clearly say that fresh news context is limited. If only retrieved news context is available, give a news-led summary and clearly say that live market levels are unavailable. Do not guess missing data."
+    });
+  } else if (routeInfo.route === "hybrid_market_news") {
+    messages.push({
+      role: "system",
+      content: "The user wants current market-news context. If live market data is also available, use it as supporting context. If live market data is unavailable but retrieved news context exists, still answer using the retrieved news and be explicit about the missing live snapshot."
+    });
+  }
+
+  if (isHybridMarketRoute && marketInfo.note && !marketInfo.marketData) {
+    messages.push({
+      role: "system",
+      content: `Live market snapshot status: ${marketInfo.note} If retrieved news context is available, still answer using it and clearly state that live index levels could not be fetched.`
+    });
+  }
   if (marketInfo.context) {
     messages.push({ role: "system", content: marketInfo.context });
+  }
+  if (retrievalInfo.context) {
+    messages.push({ role: "system", content: retrievalInfo.context });
+  } else if (routeInfo.useKnowledgeRetrieval) {
+    messages.push({
+      role: "system",
+      content: "No matching knowledge-base documents were retrieved for this request. If the user is asking about current rules, latest guidelines, or recent news, avoid overstating freshness and be transparent about uncertainty."
+    });
   }
   messages.push(...conversationHistory);
 
@@ -574,7 +914,14 @@ app.post("/api/chat", async (req, res) => {
       return res.status(502).json({ error: "The AI provider returned an empty response." });
     }
 
-    return res.json({ message: assistantMessage, marketData: marketInfo.marketData });
+    const suggestedQuestions = await generateSuggestedQuestions(apiKey, userMessage, assistantMessage, marketInfo.marketData);
+    return res.json({
+      message: assistantMessage,
+      marketData: marketInfo.marketData,
+      suggestedQuestions,
+      retrievedSources: retrievalInfo.sources,
+      route: routeInfo.route
+    });
   } catch (_error) {
     return res.status(502).json({ error: "Could not connect. Please check your internet connection and try again." });
   }
@@ -587,3 +934,18 @@ app.get("*", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Financial Companion server running on http://localhost:${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,9 +1,12 @@
-{
+﻿{
   "name": "financial-companion-ai-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "build:knowledge": "node scripts/build-knowledge-index.js",
+    "ingest:news": "node scripts/ingest-news.js",
+    "refresh:news": "node scripts/refresh-news.js",
     "dev": "node --watch server.js",
     "start": "node server.js"
   },
@@ -15,4 +18,3 @@
     "node": ">=18"
   }
 }
-

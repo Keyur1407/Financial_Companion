@@ -1,0 +1,8 @@
+{
+  "title": "KYC onboarding reference note",
+  "sourceType": "platform_guide",
+  "category": "kyc",
+  "tags": ["kyc", "aadhaar", "pan", "sebi", "investor onboarding"],
+  "summary": "Reference note covering the typical onboarding flow for first-time investors in India.",
+  "content": "KYC is the identity verification step that allows an investor to open and use regulated investment accounts. In a typical Indian onboarding flow, the investor is asked for PAN details, Aadhaar-linked identity details, date of birth, address, and a recent photograph.\n\nPlatforms often verify the investor's bank account, nominee details, and mobile number before allowing transactions. Risk profiling questions may also be shown so the platform can understand whether the investor has a conservative, moderate, or aggressive risk appetite.\n\nA simple way to explain KYC to a beginner is this: regulators want to make sure the account belongs to a real person, the tax identity is valid, and the money flow is traceable. KYC is usually a one-time setup step, but users may need to update it if their address, bank account, or identity details change later.\n\nFor educational responses, avoid claiming that one exact checklist applies everywhere. Different brokers, mutual fund platforms, and intermediaries can request slightly different supporting steps or declarations."
+}

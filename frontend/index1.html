@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wealthtick - Financial AI Buddy</title>
+  <title>Financial Companion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div class="header-inner">
-        <div class="brand-block"><div class="brand-logo" aria-hidden="true"><svg width="42" height="34" viewBox="0 0 120 96" fill="none"><path d="M12 16h34L74 68l14-20h20L74 92 12 16Z" fill="#18C5F4"/><path d="M72 16h36L74 74l-14-20 12-18Z" fill="#7B2CF7"/></svg></div><div><div class="brand-mark">Wealthtick</div><div class="brand-tagline">Your Financial AI Buddy</div></div></div>
+        <div class="brand-block"><div class="brand-mark">FinGuide</div><div class="brand-tagline">Investor Education Assistant</div></div>
         <div class="header-controls">
           <button type="button" class="header-icon-button" id="mobile-settings-toggle" aria-label="Show API key settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
           <div class="api-key-panel" aria-label="Secure backend status"><label class="api-key-label" for="api-key-input">Secure AI Backend</label><input id="api-key-input" class="api-key-input" type="text" value="Managed securely on the server" readonly><div class="api-key-helper">Groq access is handled server-side through the protected backend API.</div></div>
@@ -33,8 +33,8 @@
         <div class="chat-surface">
           <div class="chat-messages" id="chat-messages">
             <div class="starter-state" id="starter-state">
-              <div class="starter-heading">Ask Nivisha anything about investing</div>
-              <div class="starter-subtext">Ask in plain language. Wealthtick keeps answers simple, practical, and grounded in your Indian investing journey.</div>
+              <div class="starter-heading">Start your first investing conversation</div>
+              <div class="starter-subtext">Ask in plain language. FinGuide keeps the answers simple, practical, and grounded in the Indian investing journey.</div>
               <div class="starter-grid">
                 <button type="button" class="starter-card" data-starter="I am new to investing - where do I even begin?"><span class="starter-card-label">Starter 1</span><div class="starter-card-text">I am new to investing - Where do I even begin?</div></button>
                 <button type="button" class="starter-card" data-starter="I have Rs 5,000 per month to invest. What should I do?"><span class="starter-card-label">Starter 2</span><div class="starter-card-text">I have Rs 5,000 per month to invest. What should I do?</div></button>
@@ -43,20 +43,23 @@
               </div>
             </div>
             <div class="chat-thread hidden" id="chat-thread" aria-live="polite"></div>
-            <div class="typing-row hidden" id="typing-indicator" aria-live="polite" aria-label="Assistant is typing"><div class="message-avatar">W</div><div class="typing-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
+            <div class="typing-row hidden" id="typing-indicator" aria-live="polite" aria-label="Assistant is typing"><div class="message-avatar">F</div><div class="typing-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
           </div>
-          <div class="chat-composer"><form id="chat-form" class="chat-form"><input id="chat-input" class="chat-input" type="text" placeholder="Ask about SIPs, stocks, market moves, taxes, goals, or how to begin" autocomplete="off"><button id="send-button" class="send-button" type="submit">Send</button></form><div class="helper-caption">Wealthtick explains publicly available market information in simple language. It does not provide personalised buy or sell advice.</div></div>
+          <div class="chat-composer"><form id="chat-form" class="chat-form"><input id="chat-input" class="chat-input" type="text" placeholder="Ask about SIPs, mutual funds, taxes, goals, or how to begin" autocomplete="off"><button id="send-button" class="send-button" type="submit">Send</button></form><div class="helper-caption">Educational guidance only. FinGuide helps users understand core investing concepts before taking a first step.</div></div>
         </div>
       </section>
     </main>
-    <footer class="app-footer"><div>Powered by Wealthtick AI</div><div>Informational analysis only, based on publicly available market data. Not a personalised investment recommendation.</div></footer>
+    <footer class="app-footer"><div>Powered by Financial Companion - llama-3.3-70b via Groq</div><div>Educational purposes only. Not investment advice. Consult a SEBI-registered advisor.</div></footer>
     <button type="button" class="topics-fab" id="topics-fab" aria-label="Open quick topics"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" fill="currentColor"/></svg>Topics</button>
     <div class="topics-backdrop" id="topics-backdrop"></div>
     <aside class="mobile-drawer" id="mobile-drawer" aria-label="Topics and goals"><div class="drawer-header"><div class="drawer-title">Topics</div><button type="button" class="drawer-close" id="drawer-close" aria-label="Close topics panel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><div class="drawer-content"><div class="panel-stack"><section><div class="profile-card"><div class="profile-label">Investor Profile</div><div class="profile-name">Arjun Sharma</div><div class="profile-meta">Age 27 - Mumbai</div></div></section><section><h2 class="panel-section-title">Your Goals</h2><div class="goal-list"><div class="goal-card"><span class="goal-dot" style="background:#1D9E75"></span><div><div class="goal-name">Retirement</div><div class="goal-target">Target year: 2055</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#3B82F6"></span><div><div class="goal-name">Child's Education</div><div class="goal-target">Target year: 2040</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#F59E0B"></span><div><div class="goal-name">Emergency Fund</div><div class="goal-target">Target: 3x expenses</div></div></div></div></section><section><h2 class="panel-section-title">Quick Topics</h2><div class="quick-topic-grid"><button type="button" class="quick-topic">What is SIP?</button><button type="button" class="quick-topic">How do mutual funds work?</button><button type="button" class="quick-topic">Equity vs Debt</button><button type="button" class="quick-topic">How much should I invest?</button><button type="button" class="quick-topic">SIP calculator</button><button type="button" class="quick-topic">What is XIRR?</button><button type="button" class="quick-topic">Tax on investments</button><button type="button" class="quick-topic">How to start investing?</button><button type="button" class="quick-topic">What is an index fund?</button></div></section></div></div></aside>
   </div>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
+
+
+
+
+
 
