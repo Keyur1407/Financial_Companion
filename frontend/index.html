@@ -8,12 +8,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">  
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./portfolio.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div class="header-inner">
         <div class="brand-block"><div class="brand-logo" aria-hidden="true"><svg width="42" height="34" viewBox="0 0 120 96" fill="none"><path d="M12 16h34L74 68l14-20h20L74 92 12 16Z" fill="#18C5F4"/><path d="M72 16h36L74 74l-14-20 12-18Z" fill="#7B2CF7"/></svg></div><div><div class="brand-mark">Wealthtick</div><div class="brand-tagline">Your Financial AI Buddy</div></div></div>
+        <nav class="header-nav" aria-label="App navigation">
+          <button type="button" class="header-nav-btn active" id="nav-chat" onclick="switchView('chat')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Chat
+          </button>
+          <button type="button" class="header-nav-btn" id="nav-portfolio" onclick="switchView('portfolio')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3v18h18M7 16l4-4 4 4 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Portfolio
+          </button>
+        </nav>
         <div class="header-controls">
           <button type="button" class="header-icon-button" id="mobile-settings-toggle" aria-label="Show API key settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
           <div class="api-key-panel" aria-label="Secure backend status"><label class="api-key-label" for="api-key-input">Secure AI Backend</label><input id="api-key-input" class="api-key-input" type="text" value="Managed securely on the server" readonly><div class="api-key-helper">Groq access is handled server-side through the protected backend API.</div></div>
@@ -21,11 +32,12 @@
       </div>
       <div class="mobile-api-panel" id="mobile-api-panel"><div class="api-key-panel" style="display:flex;min-width:0"><label class="api-key-label" for="api-key-input-mobile">Secure AI Backend</label><input id="api-key-input-mobile" class="api-key-input" type="text" value="Managed securely on the server" readonly><div class="api-key-helper">Groq access is handled server-side through the protected backend API.</div></div></div>
     </header>
+    <div id="view-chat" class="app-view active">
     <main class="main-layout">
       <aside class="context-panel" aria-label="Investor context panel">
         <div class="panel-stack">
-          <section><div class="profile-card"><div class="profile-label">Investor Profile</div><div class="profile-name">Arjun Sharma</div><div class="profile-meta">Age 27 - Mumbai</div></div></section>
-          <section><h2 class="panel-section-title">Your Goals</h2><div class="goal-list"><div class="goal-card"><span class="goal-dot" style="background:#1D9E75"></span><div><div class="goal-name">Retirement</div><div class="goal-target">Target year: 2055</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#3B82F6"></span><div><div class="goal-name">Child's Education</div><div class="goal-target">Target year: 2040</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#F59E0B"></span><div><div class="goal-name">Emergency Fund</div><div class="goal-target">Target: 3x expenses</div></div></div></div></section>
+          <section><div class="profile-card"><div class="profile-label">Investor Profile <button type="button" class="profile-edit-btn" id="profile-edit-btn" aria-label="Edit profile" title="Edit profile"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><div class="profile-name" id="profile-name">Arjun Sharma</div><div class="profile-meta" id="profile-meta">Age 27 - Mumbai</div></div></section>
+          <section><div class="panel-section-head-row"><h2 class="panel-section-title">Your Goals</h2><button type="button" class="sidebar-goals-manage-btn" id="sidebar-goals-manage-btn" title="Manage goals">Edit</button></div><div class="goal-list" id="sidebar-goal-list"></div></section>
           <section><h2 class="panel-section-title">Quick Topics</h2><div class="quick-topic-grid"><button type="button" class="quick-topic">What is SIP?</button><button type="button" class="quick-topic">How do mutual funds work?</button><button type="button" class="quick-topic">Equity vs Debt</button><button type="button" class="quick-topic">How much should I invest?</button><button type="button" class="quick-topic">SIP calculator</button><button type="button" class="quick-topic">What is XIRR?</button><button type="button" class="quick-topic">Tax on investments</button><button type="button" class="quick-topic">How to start investing?</button><button type="button" class="quick-topic">What is an index fund?</button></div></section>
         </div>
       </aside>
@@ -49,14 +61,19 @@
         </div>
       </section>
     </main>
+    </div>
+    <div id="view-portfolio" class="app-view"></div>
     <footer class="app-footer"><div>Powered by Wealthtick AI</div><div>Informational analysis only, based on publicly available market data. Not a personalised investment recommendation.</div></footer>
     <button type="button" class="topics-fab" id="topics-fab" aria-label="Open quick topics"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" fill="currentColor"/></svg>Topics</button>
     <div class="topics-backdrop" id="topics-backdrop"></div>
-    <aside class="mobile-drawer" id="mobile-drawer" aria-label="Topics and goals"><div class="drawer-header"><div class="drawer-title">Topics</div><button type="button" class="drawer-close" id="drawer-close" aria-label="Close topics panel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><div class="drawer-content"><div class="panel-stack"><section><div class="profile-card"><div class="profile-label">Investor Profile</div><div class="profile-name">Arjun Sharma</div><div class="profile-meta">Age 27 - Mumbai</div></div></section><section><h2 class="panel-section-title">Your Goals</h2><div class="goal-list"><div class="goal-card"><span class="goal-dot" style="background:#1D9E75"></span><div><div class="goal-name">Retirement</div><div class="goal-target">Target year: 2055</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#3B82F6"></span><div><div class="goal-name">Child's Education</div><div class="goal-target">Target year: 2040</div></div></div><div class="goal-card"><span class="goal-dot" style="background:#F59E0B"></span><div><div class="goal-name">Emergency Fund</div><div class="goal-target">Target: 3x expenses</div></div></div></div></section><section><h2 class="panel-section-title">Quick Topics</h2><div class="quick-topic-grid"><button type="button" class="quick-topic">What is SIP?</button><button type="button" class="quick-topic">How do mutual funds work?</button><button type="button" class="quick-topic">Equity vs Debt</button><button type="button" class="quick-topic">How much should I invest?</button><button type="button" class="quick-topic">SIP calculator</button><button type="button" class="quick-topic">What is XIRR?</button><button type="button" class="quick-topic">Tax on investments</button><button type="button" class="quick-topic">How to start investing?</button><button type="button" class="quick-topic">What is an index fund?</button></div></section></div></div></aside>
+    <aside class="mobile-drawer" id="mobile-drawer" aria-label="Topics and goals"><div class="drawer-header"><div class="drawer-title">Topics</div><button type="button" class="drawer-close" id="drawer-close" aria-label="Close topics panel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><div class="drawer-content"><div class="panel-stack"><section><div class="profile-card"><div class="profile-label">Investor Profile</div><div class="profile-name" id="profile-name-mobile">Arjun Sharma</div><div class="profile-meta" id="profile-meta-mobile">Age 27 - Mumbai</div></div></section><section><div class="panel-section-head-row"><h2 class="panel-section-title">Your Goals</h2><button type="button" class="sidebar-goals-manage-btn" id="mobile-goals-manage-btn" title="Manage goals">Edit</button></div><div class="goal-list" id="mobile-goal-list"></div></section><section><h2 class="panel-section-title">Quick Topics</h2><div class="quick-topic-grid"><button type="button" class="quick-topic">What is SIP?</button><button type="button" class="quick-topic">How do mutual funds work?</button><button type="button" class="quick-topic">Equity vs Debt</button><button type="button" class="quick-topic">How much should I invest?</button><button type="button" class="quick-topic">SIP calculator</button><button type="button" class="quick-topic">What is XIRR?</button><button type="button" class="quick-topic">Tax on investments</button><button type="button" class="quick-topic">How to start investing?</button><button type="button" class="quick-topic">What is an index fund?</button></div></section></div></div></aside>
   </div>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="./app.js"></script>
+  <script src="./portfolioModule.js"></script>
 </body>
 </html>
+
+
 

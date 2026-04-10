@@ -9,3 +9,4 @@ data/chroma/
 data/knowledge/raw/news/ingested/
 data/knowledge/processed/knowledge-index.json
 data/knowledge/processed/news-manifest.json
+.claude

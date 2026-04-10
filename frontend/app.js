@@ -1185,4 +1185,104 @@ window.addEventListener("resize", () => {
   }
 });
 
+// ─── User Profile Persistence ───────────────────────────────────────────────
+
+const STORAGE_KEY_PROFILE = "wealthtick_profile";
+const DEFAULT_PROFILE = { name: "Arjun Sharma", age: 27, city: "Mumbai" };
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_PROFILE);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.name) return { ...DEFAULT_PROFILE, ...parsed };
+    }
+  } catch (_) {}
+  return { ...DEFAULT_PROFILE };
+}
+
+function saveProfile(profile) {
+  try { localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile)); } catch (_) {}
+}
+
+function renderProfile(profile) {
+  const nameEl = document.getElementById("profile-name");
+  const metaEl = document.getElementById("profile-meta");
+  const nameMobileEl = document.getElementById("profile-name-mobile");
+  const metaMobileEl = document.getElementById("profile-meta-mobile");
+  const metaText = `Age ${profile.age} - ${profile.city}`;
+  if (nameEl) nameEl.textContent = profile.name;
+  if (metaEl) metaEl.textContent = metaText;
+  if (nameMobileEl) nameMobileEl.textContent = profile.name;
+  if (metaMobileEl) metaMobileEl.textContent = metaText;
+}
+
+function openProfileEditor(currentProfile) {
+  const existing = document.getElementById("profile-edit-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "profile-edit-modal";
+  overlay.className = "profile-modal-overlay";
+  overlay.innerHTML = `
+    <div class="profile-modal">
+      <div class="profile-modal-head">
+        <div class="profile-modal-title">Edit Investor Profile</div>
+        <button type="button" class="profile-modal-close" id="profile-modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form id="profile-edit-form" class="profile-edit-form">
+        <label class="profile-field-label">Name
+          <input class="profile-field-input" type="text" name="name" value="${escapeHtml(currentProfile.name)}" required maxlength="60" placeholder="Your name">
+        </label>
+        <label class="profile-field-label">Age
+          <input class="profile-field-input" type="number" name="age" value="${currentProfile.age}" min="10" max="100" required placeholder="Age">
+        </label>
+        <label class="profile-field-label">City
+          <input class="profile-field-input" type="text" name="city" value="${escapeHtml(currentProfile.city)}" required maxlength="60" placeholder="City">
+        </label>
+        <div class="profile-modal-actions">
+          <button type="button" class="profile-modal-cancel" id="profile-modal-cancel">Cancel</button>
+          <button type="submit" class="profile-modal-save">Save</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeModal = () => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  document.getElementById("profile-modal-close").addEventListener("click", closeModal);
+  document.getElementById("profile-modal-cancel").addEventListener("click", closeModal);
+
+  document.getElementById("profile-edit-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    const updated = {
+      name: String(data.get("name") || "").trim() || currentProfile.name,
+      age: Math.max(10, Math.min(100, Number(data.get("age")) || currentProfile.age)),
+      city: String(data.get("city") || "").trim() || currentProfile.city
+    };
+    saveProfile(updated);
+    renderProfile(updated);
+    closeModal();
+  });
+}
+
+// Init profile on page load
+const _currentProfile = loadProfile();
+renderProfile(_currentProfile);
+
+document.getElementById("profile-edit-btn").addEventListener("click", () => {
+  openProfileEditor(loadProfile());
+});
+
+// Sidebar "Edit" buttons for goals — openGoalsEditor is defined in portfolioModule.js
+["sidebar-goals-manage-btn", "mobile-goals-manage-btn"].forEach((id) => {
+  const btn = document.getElementById(id);
+  if (btn) btn.addEventListener("click", () => { if (typeof openGoalsEditor === "function") openGoalsEditor(); });
+});
+
 

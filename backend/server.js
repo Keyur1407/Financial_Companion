@@ -772,11 +772,167 @@ async function maybeBuildMarketContext(userMessage) {
     };
   }
 }
-
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// ------------------------------------------------------------------
+// Stock lookup: resolve a holding name to symbol + live market data
+// ------------------------------------------------------------------
+app.get("/api/stock-lookup", async (req, res) => {
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (!query) {
+    return res.status(400).json({ error: "Missing query parameter ?q=<stock name>" });
+  }
+
+  try {
+    const symbol = await resolveEquitySymbol(query);
+    if (!symbol) {
+      return res.status(404).json({ error: "Could not resolve a symbol for that name." });
+    }
+
+    const payload = await nseFetchJson(`/api/quote-equity?symbol=${encodeURIComponent(symbol)}`);
+    const priceInfo = payload.priceInfo || {};
+    const info = payload.info || {};
+    const metadata = payload.metadata || {};
+
+    if (!priceInfo.lastPrice && !metadata.lastPrice) {
+      return res.status(404).json({ error: "No price data found for that symbol." });
+    }
+
+    const industry = info.industry || metadata.industry || "";
+
+    return res.json({
+      symbol,
+      name: info.companyName || metadata.symbol || symbol,
+      currentPrice: priceInfo.lastPrice || metadata.lastPrice,
+      dayChangePct: priceInfo.pChange != null ? priceInfo.pChange : 0,
+      sector: industry || "Unclassified",
+      assetType: "Equity",
+      marketCap: classifyMarketCap(metadata.macro),
+      previousClose: priceInfo.previousClose || null,
+      open: priceInfo.open || null,
+      high: priceInfo.intraDayHighLow ? priceInfo.intraDayHighLow.max : null,
+      low: priceInfo.intraDayHighLow ? priceInfo.intraDayHighLow.min : null,
+      lastUpdated: metadata.lastUpdateTime || ""
+    });
+  } catch (error) {
+    console.error("[stock-lookup] Failed:", error.message || error);
+    return res.status(502).json({ error: "Could not fetch stock data right now. Please try again." });
+  }
+});
+
+function classifyMarketCap(macro) {
+  if (!macro) return "Large Cap";
+  const lower = String(macro).toLowerCase();
+  if (/small/i.test(lower)) return "Small Cap";
+  if (/mid/i.test(lower)) return "Mid Cap";
+  return "Large Cap";
+}
+
+// ------------------------------------------------------------------
+// Portfolio insights: AI summary with news, P&L, and market context
+// ------------------------------------------------------------------
+app.post("/api/portfolio-insights", async (req, res) => {
+  const apiKey = (process.env.GROQ_API_KEY || "").trim();
+  if (!apiKey) {
+    return res.status(500).json({ error: "AI backend not configured." });
+  }
+
+  const portfolioSnapshot = req.body.portfolioSnapshot || {};
+  const holdingNames = Array.isArray(req.body.holdingNames) ? req.body.holdingNames.slice(0, 20) : [];
+
+  // Fetch market context (NIFTY 50) for general market read
+  let marketContext = "";
+  try {
+    const niftySnapshot = await fetchIndexSnapshot("NIFTY 50");
+    if (niftySnapshot) {
+      const marketData = buildMarketInsights(niftySnapshot);
+      marketContext = buildMarketContext(niftySnapshot, marketData);
+    }
+  } catch (_e) { /* ignore */ }
+
+  // Fetch news from RAG for holdings + general market
+  let holdingNewsContext = "";
+  let generalNewsContext = "";
+  try {
+    const holdingQuery = holdingNames.length
+      ? `Latest news about ${holdingNames.slice(0, 5).join(", ")}`
+      : "";
+    if (holdingQuery) {
+      const holdingRetrieval = await retrieveKnowledgeContext(holdingQuery, {
+        route: "hybrid_market_news",
+        useKnowledgeRetrieval: true,
+        knowledgeScopes: ["news"]
+      });
+      if (holdingRetrieval.context) holdingNewsContext = holdingRetrieval.context;
+    }
+
+    const generalRetrieval = await retrieveKnowledgeContext("today's market news themes and global news", {
+      route: "hybrid_market_news",
+      useKnowledgeRetrieval: true,
+      knowledgeScopes: ["news"]
+    });
+    if (generalRetrieval.context) generalNewsContext = generalRetrieval.context;
+  } catch (_e) { /* ignore */ }
+
+  const promptParts = [
+    "You are a portfolio analyst for an Indian beginner investor.",
+    "Generate a structured portfolio insight with EXACTLY these 4 sections, using these exact headings:",
+    "",
+    "**Today's P&L Summary**",
+    "Summarize the portfolio's daily performance in 2-3 sentences using the data below.",
+    "",
+    "**Holdings News**",
+    "If any recent news is available about the user's holdings, mention it briefly (2-3 bullet points). If no news is available, say 'No recent news found for your holdings.'",
+    "",
+    "**Market & Sector News**",
+    "Summarize 2-3 key market themes, sector moves, or global news items if available. If no news context is available, say 'No fresh market news loaded right now.'",
+    "",
+    "**Quick Take**",
+    "One-line overall read on the portfolio's position today.",
+    "",
+    "Keep total response under 200 words. Do not give buy/sell advice.",
+    "",
+    `Portfolio snapshot: ${JSON.stringify(portfolioSnapshot)}`,
+    holdingNewsContext ? `\nHolding-related news context:\n${holdingNewsContext}` : "",
+    generalNewsContext ? `\nGeneral market news context:\n${generalNewsContext}` : "",
+    marketContext ? `\nLive market data:\n${marketContext}` : ""
+  ];
+
+  try {
+    const response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 600,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: promptParts.filter(Boolean).join("\n") }
+        ]
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return res.status(502).json({ error: "AI provider returned an error." });
+    }
+
+    const aiMessage = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    return res.json({
+      summary: aiMessage || "",
+      hasHoldingNews: !!holdingNewsContext,
+      hasMarketNews: !!generalNewsContext,
+      hasMarketData: !!marketContext
+    });
+  } catch (_error) {
+    return res.status(502).json({ error: "Could not connect to AI provider." });
+  }
+});
 app.post("/api/chat", async (req, res) => {
   const apiKey = (process.env.GROQ_API_KEY || "").trim();
   if (!apiKey) {
@@ -935,18 +1091,3 @@ app.get("*", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Financial Companion server running on http://localhost:${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

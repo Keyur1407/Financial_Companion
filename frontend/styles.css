@@ -50,8 +50,20 @@ a { color: inherit; }
 
 .app-shell {
   min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
+}
+.app-view {
+  display: none;
+}
+.app-view.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+#view-portfolio.active {
+  overflow-y: auto;
 }
 
 /* ── Header ── */
@@ -148,6 +160,7 @@ a { color: inherit; }
 
 /* ── Layout ── */
 .main-layout {
+  flex: 1;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(270px, 28%) minmax(0, 1fr);
@@ -202,6 +215,98 @@ a { color: inherit; }
   font-size: 11px; font-weight: 700;
   color: rgba(255,255,255,0.7);
   text-transform: uppercase; letter-spacing: 0.08em;
+  display: flex; align-items: center; gap: 8px;
+}
+.profile-edit-btn {
+  background: rgba(255,255,255,0.18); border: none; border-radius: 6px;
+  padding: 3px 5px; cursor: pointer; color: rgba(255,255,255,0.85);
+  display: inline-flex; align-items: center; line-height: 1;
+  transition: background 0.15s;
+}
+.profile-edit-btn:hover { background: rgba(255,255,255,0.32); }
+
+.profile-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(26,20,64,0.45); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.profile-modal {
+  background: var(--surface); border-radius: 20px; width: 100%; max-width: 380px;
+  box-shadow: var(--shadow-md); padding: 24px;
+}
+.profile-modal-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+}
+.profile-modal-title { font-family: "Sora", sans-serif; font-size: 17px; font-weight: 700; color: var(--text); }
+.profile-modal-close {
+  background: var(--border-soft); border: none; border-radius: 8px; padding: 6px;
+  cursor: pointer; color: var(--text-soft); display: flex; align-items: center;
+}
+.profile-modal-close:hover { background: var(--border); }
+.profile-edit-form { display: grid; gap: 14px; }
+.profile-field-label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; }
+.profile-field-input {
+  padding: 10px 13px; border-radius: 10px; border: 1.5px solid var(--border);
+  font-size: 15px; color: var(--text); background: var(--page-bg); outline: none;
+  transition: border-color 0.15s;
+}
+.profile-field-input:focus { border-color: var(--primary); }
+.profile-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.profile-modal-cancel {
+  background: var(--border-soft); border: none; border-radius: 10px;
+  padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--text-soft); cursor: pointer;
+}
+.profile-modal-cancel:hover { background: var(--border); }
+.profile-modal-save {
+  background: var(--primary); border: none; border-radius: 10px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700; color: white; cursor: pointer;
+}
+.profile-modal-save:hover { background: var(--primary-dark); }
+
+/* ── Sidebar goals section header ── */
+.panel-section-head-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.panel-section-head-row .panel-section-title { margin-bottom: 0; }
+.sidebar-goals-manage-btn {
+  background: var(--border-soft); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 3px 10px; font-size: 11px; font-weight: 700; color: var(--text-soft);
+  cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-goals-manage-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+/* ── Goals editor modal (reuses profile-modal-overlay base) ── */
+.goals-modal { max-width: 560px; }
+.goals-modal-note { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+.goals-modal-list { display: grid; gap: 8px; max-height: 340px; overflow-y: auto; margin-bottom: 12px; padding-right: 2px; }
+.goals-modal-row {
+  display: grid;
+  grid-template-columns: 16px 1fr 140px 84px 34px;
+  gap: 8px;
+  align-items: center;
+}
+.goals-dot-preview { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.goals-name-input   { font-size: 14px; }
+.goals-amount-input { font-size: 13px; }
+.goals-year-input   { font-size: 13px; }
+.goals-delete-btn {
+  background: rgba(220,38,38,0.08); border: none; border-radius: 8px;
+  padding: 7px; cursor: pointer; color: #DC2626; display: grid; place-items: center;
+  transition: background 0.15s;
+}
+.goals-delete-btn:hover { background: rgba(220,38,38,0.18); }
+.goals-add-btn {
+  width: 100%; background: var(--border-soft); border: 1.5px dashed var(--border);
+  border-radius: 10px; padding: 9px; font-size: 13px; font-weight: 600;
+  color: var(--text-soft); cursor: pointer; margin-bottom: 16px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.goals-add-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+@media (max-width: 560px) {
+  .goals-modal-row { grid-template-columns: 14px 1fr 34px; }
+  .goals-amount-input, .goals-year-input { display: none; }
 }
 .profile-name {
   margin-top: 8px;
