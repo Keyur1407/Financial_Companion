@@ -710,3 +710,86 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+html[data-theme="dark"] .header-nav-btn {
+  background: rgba(18,29,34,0.82);
+  border-color: var(--border);
+  color: var(--text-soft);
+}
+html[data-theme="dark"] .header-nav-btn:hover {
+  background: rgba(55,191,168,0.12);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+html[data-theme="dark"] .header-nav-btn.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: #071014;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+html[data-theme="dark"] .portfolio-shell {
+  background: linear-gradient(180deg, rgba(11,17,20,0.96) 0%, rgba(8,13,16,1) 100%);
+}
+html[data-theme="dark"] .portfolio-shell-inner,
+html[data-theme="dark"] .portfolio-card,
+html[data-theme="dark"] .portfolio-overview-card,
+html[data-theme="dark"] .portfolio-flag-card,
+html[data-theme="dark"] .portfolio-goal-card {
+  background: linear-gradient(180deg, rgba(18,29,34,0.98) 0%, rgba(12,20,24,0.98) 100%);
+  border-color: var(--border-soft);
+  box-shadow: var(--shadow-sm);
+}
+html[data-theme="dark"] .portfolio-action-button,
+html[data-theme="dark"] .portfolio-form-submit,
+html[data-theme="dark"] .portfolio-holding-badge,
+html[data-theme="dark"] .portfolio-tab.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: #071014;
+}
+html[data-theme="dark"] .portfolio-action-button.secondary,
+html[data-theme="dark"] .portfolio-tab,
+html[data-theme="dark"] .portfolio-user-select,
+html[data-theme="dark"] .portfolio-hero-pill,
+html[data-theme="dark"] .portfolio-chip,
+html[data-theme="dark"] .portfolio-input,
+html[data-theme="dark"] .portfolio-table-input {
+  background: rgba(13,23,27,0.96);
+  border-color: var(--border);
+  color: var(--text-soft);
+}
+html[data-theme="dark"] .portfolio-insight-section,
+html[data-theme="dark"] .portfolio-empty-state,
+html[data-theme="dark"] .portfolio-tax-summary-row td,
+html[data-theme="dark"] .portfolio-nivisha-card {
+  background: rgba(20,58,59,0.28);
+  border-color: var(--border-soft);
+}
+html[data-theme="dark"] .portfolio-insight-quicktake {
+  background: linear-gradient(135deg, rgba(55,191,168,0.14) 0%, rgba(114,167,255,0.1) 100%);
+}
+html[data-theme="dark"] .portfolio-summary-pill,
+html[data-theme="dark"] .portfolio-score-pill.neutral,
+html[data-theme="dark"] .portfolio-flag-card.moderate .portfolio-flag-severity {
+  background: var(--accent-soft);
+  color: var(--primary-dark);
+}
+html[data-theme="dark"] .portfolio-donut::after,
+html[data-theme="dark"] .portfolio-donut-center {
+  background: #0D171B;
+}
+html[data-theme="dark"] .portfolio-allocation-bar,
+html[data-theme="dark"] .portfolio-factor-bar,
+html[data-theme="dark"] .portfolio-goal-weight-bar,
+html[data-theme="dark"] .portfolio-goal-target-section .portfolio-goal-progress-bar-wrap {
+  background: #17272C;
+}
+html[data-theme="dark"] .portfolio-table th,
+html[data-theme="dark"] .portfolio-table td {
+  border-bottom-color: var(--border-soft);
+}
+html[data-theme="dark"] .portfolio-row-action {
+  background: rgba(255,138,150,0.12);
+}
+html[data-theme="dark"] .portfolio-tax-badge.stcg {
+  background: rgba(245,158,11,0.18);
+  color: #FBBF24;
+}

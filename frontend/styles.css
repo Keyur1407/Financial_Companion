@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
 
 :root {
+  color-scheme: light;
   --primary: #6C5CE7;
   --primary-dark: #5849C2;
   --primary-light: #EEF0FF;
@@ -26,6 +27,33 @@
   --danger-border: #FCA5A5;
   --danger-text: #B91C1C;
   --blue: #3B82F6;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: #37BFA8;
+  --primary-dark: #7BE7D5;
+  --primary-light: #143A3B;
+  --primary-glow: rgba(55, 191, 168, 0.18);
+  --accent: #72A7FF;
+  --accent-soft: #14283A;
+  --text: #F3F8F7;
+  --text-soft: #C2D2D0;
+  --muted: #8EA39F;
+  --border: #29413F;
+  --border-soft: #203532;
+  --page-bg: #0B1114;
+  --surface: #121D22;
+  --shadow-md: 0 20px 60px rgba(0,0,0,0.38), 0 4px 16px rgba(0,0,0,0.24);
+  --shadow-sm: 0 4px 16px rgba(0,0,0,0.24);
+  --positive-soft: #0C352B;
+  --positive-text: #69DBB4;
+  --negative-soft: #3A171B;
+  --negative-text: #FF8A96;
+  --neutral-soft: #172328;
+  --neutral-text: #A7B7B4;
+  --danger-bg: #36171B;
+  --danger-border: #7F2A35;
+  --danger-text: #FFADB6;
 }
 
 * { box-sizing: border-box; }
@@ -99,14 +127,14 @@ a { color: inherit; }
   line-height: 1;
 }
 .brand-tagline { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 500; }
-.api-key-helper, .helper-caption, .goal-target, .message-time,
+.helper-caption, .goal-target, .message-time,
 .calc-label, .calc-disclaimer, .calc-corpus-label, .calc-stat-label,
 .suggested-label, .market-eyebrow, .market-updated, .market-section-label,
 .market-range-label, .market-summary-note, .market-stat-label, .market-footnote {
   font-size: 12px;
   color: var(--muted);
 }
-.header-controls, .api-key-panel, .panel-stack, .calc-field,
+.header-controls, .panel-stack, .calc-field,
 .message-stack, .chat-thread, .suggested-questions,
 .market-card, .market-summary-panel, .market-section {
   display: flex;
@@ -116,13 +144,12 @@ a { color: inherit; }
   align-items: flex-end;
   gap: 12px;
 }
-.api-key-panel { gap: 6px; min-width: 260px; max-width: 320px; }
-.api-key-label, .panel-section-title, .goal-name, .starter-card-text,
+.panel-section-title, .goal-name, .starter-card-text,
 .calc-heading, .advisor-heading, .send-button, .calc-button, .consult-button,
 .suggested-chip, .market-card-title, .market-stat-value,
 .market-highlight-value, .market-level-chip, .market-summary-title { font-weight: 600; }
 
-.api-key-input, .chat-input, .calc-input {
+.chat-input, .calc-input {
   width: 100%;
   border: 1.5px solid var(--border);
   border-radius: 12px;
@@ -132,12 +159,11 @@ a { color: inherit; }
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .chat-input { border-radius: 16px; padding: 14px 18px; }
-.api-key-input:focus, .chat-input:focus, .calc-input:focus {
+.chat-input:focus, .calc-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-glow);
 }
-.api-key-helper a { color: var(--primary); text-decoration: none; font-weight: 500; }
 .header-icon-button, .drawer-close {
   display: none;
   align-items: center; justify-content: center;
@@ -151,12 +177,6 @@ a { color: inherit; }
 .header-icon-button:hover, .drawer-close:hover {
   background: var(--accent-soft); border-color: var(--accent);
 }
-.mobile-api-panel {
-  display: none; padding: 0 16px 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--border-soft);
-}
-.mobile-api-panel.open { display: block; }
 
 /* ── Layout ── */
 .main-layout {
@@ -715,7 +735,6 @@ a { color: inherit; }
 @media (max-width: 767px) {
   .header-inner { padding: 12px 16px; }
   .brand-mark { font-size: 20px; }
-  .api-key-panel { display: none; }
   .header-icon-button, .drawer-close { display: inline-flex; }
   .main-layout { display: block; }
   .context-panel { display: none; }
@@ -741,3 +760,98 @@ a { color: inherit; }
 
 
 
+
+.theme-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.theme-toggle-button:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--primary-glow);
+}
+.theme-toggle-button svg { flex: 0 0 auto; }
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(55,191,168,0.13) 0%, transparent 44%),
+    radial-gradient(ellipse at 100% 100%, rgba(114,167,255,0.1) 0%, transparent 40%),
+    linear-gradient(160deg, #081013 0%, #10181D 52%, #090D10 100%);
+}
+html[data-theme="dark"] .app-header {
+  background: rgba(12,18,22,0.96);
+}
+html[data-theme="dark"] .main-layout {
+  background: linear-gradient(180deg, rgba(12,18,22,0.98) 0%, rgba(9,13,16,0.98) 100%);
+}
+html[data-theme="dark"] .context-panel,
+html[data-theme="dark"] .chat-composer,
+html[data-theme="dark"] .mobile-drawer,
+html[data-theme="dark"] .app-footer {
+  background: rgba(14,22,26,0.98);
+}
+html[data-theme="dark"] .chat-surface {
+  border-color: var(--border);
+  background: linear-gradient(180deg, #10191E 0%, #0C1317 100%);
+}
+html[data-theme="dark"] .chat-messages {
+  background: linear-gradient(180deg, rgba(15,24,29,0.96) 0%, rgba(10,16,20,0.98) 100%);
+}
+html[data-theme="dark"] .starter-card,
+html[data-theme="dark"] .assistant-bubble,
+html[data-theme="dark"] .typing-bubble,
+html[data-theme="dark"] .advisor-card,
+html[data-theme="dark"] .calc-card,
+html[data-theme="dark"] .source-card,
+html[data-theme="dark"] .source-item,
+html[data-theme="dark"] .assistant-feature-item,
+html[data-theme="dark"] .assistant-step-card,
+html[data-theme="dark"] .assistant-math-block,
+html[data-theme="dark"] .goal-card,
+html[data-theme="dark"] .suggested-chip,
+html[data-theme="dark"] .market-highlight,
+html[data-theme="dark"] .market-stat,
+html[data-theme="dark"] .market-range-panel,
+html[data-theme="dark"] .market-section,
+html[data-theme="dark"] .market-summary-panel {
+  background: linear-gradient(180deg, rgba(18,29,34,0.98) 0%, rgba(13,22,26,0.98) 100%);
+  border-color: var(--border-soft);
+}
+html[data-theme="dark"] .market-card.positive,
+html[data-theme="dark"] .market-card.negative,
+html[data-theme="dark"] .market-card.neutral {
+  background: linear-gradient(160deg, rgba(18,29,34,0.98) 0%, rgba(11,18,22,0.98) 100%);
+}
+html[data-theme="dark"] .assistant-rich-heading {
+  background: linear-gradient(180deg, rgba(20,58,59,0.95) 0%, rgba(18,40,58,0.82) 100%);
+  color: var(--primary-dark);
+}
+html[data-theme="dark"] .chat-input,
+html[data-theme="dark"] .calc-input,
+html[data-theme="dark"] .profile-field-input {
+  background: #0D171B;
+}
+html[data-theme="dark"] .market-range-marker { border-color: #0B1114; }
+
+@media (max-width: 767px) {
+  .theme-toggle-button { height: 34px; padding: 0 10px; }
+}
+@media (max-width: 480px) {
+  .theme-toggle-text { display: none; }
+  .theme-toggle-button { width: 36px; padding: 0; }
+}

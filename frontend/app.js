@@ -9,10 +9,8 @@ const DEFAULT_SUGGESTIONS = [
 let conversationHistory = [];
 let isSending = false;
 
-const apiKeyInput = document.getElementById("api-key-input");
-const apiKeyInputMobile = document.getElementById("api-key-input-mobile");
-const mobileSettingsToggle = document.getElementById("mobile-settings-toggle");
-const mobileApiPanel = document.getElementById("mobile-api-panel");
+const themeToggle = document.getElementById("theme-toggle");
+const THEME_STORAGE_KEY = "wealthtick_theme";
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
@@ -24,6 +22,47 @@ const topicsFab = document.getElementById("topics-fab");
 const topicsBackdrop = document.getElementById("topics-backdrop");
 const mobileDrawer = document.getElementById("mobile-drawer");
 const drawerClose = document.getElementById("drawer-close");
+
+function getPreferredTheme() {
+  try {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (storedTheme === "dark" || storedTheme === "light") {
+      return storedTheme;
+    }
+  } catch (_) {}
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function applyTheme(theme) {
+  const activeTheme = theme === "dark" ? "dark" : "light";
+  const isDark = activeTheme === "dark";
+  document.documentElement.dataset.theme = activeTheme;
+
+  if (!themeToggle) {
+    return;
+  }
+
+  const nextThemeLabel = isDark ? "light" : "dark";
+  const buttonText = themeToggle.querySelector(".theme-toggle-text");
+  themeToggle.setAttribute("aria-pressed", String(isDark));
+  themeToggle.setAttribute("aria-label", `Switch to ${nextThemeLabel} theme`);
+  if (buttonText) {
+    buttonText.textContent = isDark ? "Light" : "Dark";
+  }
+}
+
+function initThemeToggle() {
+  applyTheme(getPreferredTheme());
+  if (!themeToggle) {
+    return;
+  }
+
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(nextTheme);
+    try { localStorage.setItem(THEME_STORAGE_KEY, nextTheme); } catch (_) {}
+  });
+}
 
 function formatCurrency(value, digits = 0) {
   const numeric = Number(value);
@@ -1114,15 +1153,7 @@ const closeTopicsDrawer = () => {
   document.body.style.overflow = "";
 };
 
-apiKeyInput.addEventListener("input", (event) => {
-  apiKeyInputMobile.value = event.target.value;
-});
-
-apiKeyInputMobile.addEventListener("input", (event) => {
-  apiKeyInput.value = event.target.value;
-});
-
-mobileSettingsToggle.addEventListener("click", () => mobileApiPanel.classList.toggle("open"));
+initThemeToggle();
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   handleOutgoingMessage(chatInput.value);
@@ -1181,7 +1212,6 @@ drawerClose.addEventListener("click", closeTopicsDrawer);
 window.addEventListener("resize", () => {
   if (window.innerWidth > 767) {
     closeTopicsDrawer();
-    mobileApiPanel.classList.remove("open");
   }
 });
 
