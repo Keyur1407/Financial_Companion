@@ -1,58 +1,129 @@
 
-const PORTFOLIO_SEED_HOLDINGS = [
-  { id: 'tcs', name: 'Tata Consultancy Services', symbol: 'TCS', assetType: 'Equity', sector: 'Information Technology', marketCap: 'Large Cap', quantity: 18, averagePrice: 3380, currentPrice: 3612.35, dayChangePct: 1.42, goalTag: 'Retirement', purchaseDate: '2023-11-15' },
-  { id: 'hdfc-bank', name: 'HDFC Bank', symbol: 'HDFCBANK', assetType: 'Equity', sector: 'Financial Services', marketCap: 'Large Cap', quantity: 26, averagePrice: 1540, currentPrice: 1684.55, dayChangePct: 0.86, goalTag: 'Retirement', purchaseDate: '2024-01-20' },
-  { id: 'nifty-index-fund', name: 'ICICI Prudential Nifty 50 Index Fund', symbol: 'NIFTYINDEX', assetType: 'Mutual Fund', sector: 'Index Fund', marketCap: 'Large Cap', quantity: 340, averagePrice: 182.5, currentPrice: 196.4, dayChangePct: 0.54, goalTag: 'Retirement', purchaseDate: '2023-06-10' },
-  { id: 'bharat-bond', name: 'Bharat Bond ETF', symbol: 'BHARATBOND', assetType: 'Debt ETF', sector: 'Fixed Income', marketCap: 'Debt', quantity: 120, averagePrice: 121.8, currentPrice: 124.1, dayChangePct: 0.12, goalTag: 'Emergency Fund', purchaseDate: '2025-08-05' },
-  { id: 'sbi-small-cap', name: 'SBI Small Cap Fund', symbol: 'SBISMALL', assetType: 'Mutual Fund', sector: 'Diversified Equity', marketCap: 'Small Cap', quantity: 95, averagePrice: 114.2, currentPrice: 129.8, dayChangePct: -0.35, goalTag: 'Child Education', purchaseDate: '2025-02-14' }
-];
+const PORTFOLIO_FALLBACK_USER = {
+  id: 'arjun-sharma',
+  profile: { name: 'Arjun Sharma', age: 27, city: 'Mumbai' },
+  plan: { label: 'Growth SIP plan', monthlyInvestment: 25000, riskProfile: 'Moderate aggressive', horizon: '25+ years', notes: 'Long runway, retirement-first allocation.' },
+  holdings: [
+    { id: 'tcs', name: 'Tata Consultancy Services', symbol: 'TCS', assetType: 'Equity', sector: 'Information Technology', marketCap: 'Large Cap', quantity: 18, averagePrice: 3380, currentPrice: 3612.35, dayChangePct: 1.42, goalTag: 'Retirement', purchaseDate: '2023-11-15' },
+    { id: 'hdfc-bank', name: 'HDFC Bank', symbol: 'HDFCBANK', assetType: 'Equity', sector: 'Financial Services', marketCap: 'Large Cap', quantity: 26, averagePrice: 1540, currentPrice: 1684.55, dayChangePct: 0.86, goalTag: 'Retirement', purchaseDate: '2024-01-20' },
+    { id: 'nifty-index-fund', name: 'ICICI Prudential Nifty 50 Index Fund', symbol: 'NIFTYINDEX', assetType: 'Mutual Fund', sector: 'Index Fund', marketCap: 'Large Cap', quantity: 340, averagePrice: 182.5, currentPrice: 196.4, dayChangePct: 0.54, goalTag: 'Retirement', purchaseDate: '2023-06-10' },
+    { id: 'bharat-bond', name: 'Bharat Bond ETF', symbol: 'BHARATBOND', assetType: 'Debt ETF', sector: 'Fixed Income', marketCap: 'Debt', quantity: 120, averagePrice: 121.8, currentPrice: 124.1, dayChangePct: 0.12, goalTag: 'Emergency Fund', purchaseDate: '2025-08-05' },
+    { id: 'sbi-small-cap', name: 'SBI Small Cap Fund', symbol: 'SBISMALL', assetType: 'Mutual Fund', sector: 'Diversified Equity', marketCap: 'Small Cap', quantity: 95, averagePrice: 114.2, currentPrice: 129.8, dayChangePct: -0.35, goalTag: 'Child Education', purchaseDate: '2025-02-14' }
+  ],
+  goals: [
+    { id: 'retirement', name: 'Retirement', targetAmount: 10000000, color: '#1D9E75', targetYear: 2055 },
+    { id: 'child-education', name: 'Child Education', targetAmount: 5000000, color: '#3B82F6', targetYear: 2040 },
+    { id: 'emergency-fund', name: 'Emergency Fund', targetAmount: 1500000, color: '#F59E0B', targetYear: null },
+    { id: 'wealth-creation', name: 'Wealth Creation', targetAmount: 0, color: '#8B5CF6', targetYear: null }
+  ]
+};
 
 const PORTFOLIO_ALLOCATION_LABELS = { assetType: 'Asset Class', sector: 'Sector Mix', marketCap: 'Market Cap' };
 const PORTFOLIO_COLORS = ['#6C5CE7', '#18C5F4', '#1D9E75', '#F59E0B', '#EF4444', '#0EA5E9', '#8B5CF6', '#EC4899'];
 const STORAGE_KEY_HOLDINGS = 'wealthtick_holdings';
 const STORAGE_KEY_GOALS = 'wealthtick_goals';
-
-const DEFAULT_GOALS = [
-  { id: 'retirement',      name: 'Retirement',      targetAmount: 10000000, color: '#1D9E75', targetYear: 2055 },
-  { id: 'child-education', name: 'Child Education',  targetAmount: 5000000,  color: '#3B82F6', targetYear: 2040 },
-  { id: 'emergency-fund',  name: 'Emergency Fund',   targetAmount: 1500000,  color: '#F59E0B', targetYear: null },
-  { id: 'wealth-creation', name: 'Wealth Creation',  targetAmount: 0,        color: '#8B5CF6', targetYear: null },
-];
+const STORAGE_KEY_ACTIVE_USER = 'wealthtick_active_user_id';
+const portfolioUserStore = window.WealthtickUsers || null;
 const GOAL_COLORS = ['#1D9E75', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#0EA5E9', '#6C5CE7'];
 
+function clonePortfolioData(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function readPortfolioStorage(key) {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getActivePortfolioUserId() {
+  if (portfolioUserStore && typeof portfolioUserStore.getActiveUserId === 'function') {
+    return portfolioUserStore.getActiveUserId();
+  }
+  try {
+    return localStorage.getItem(STORAGE_KEY_ACTIVE_USER) || PORTFOLIO_FALLBACK_USER.id;
+  } catch (_) {
+    return PORTFOLIO_FALLBACK_USER.id;
+  }
+}
+
+function getPortfolioUsers() {
+  if (portfolioUserStore && typeof portfolioUserStore.getUsers === 'function') {
+    return portfolioUserStore.getUsers();
+  }
+  return [{ id: PORTFOLIO_FALLBACK_USER.id, name: PORTFOLIO_FALLBACK_USER.profile.name, age: PORTFOLIO_FALLBACK_USER.profile.age, city: PORTFOLIO_FALLBACK_USER.profile.city, planLabel: PORTFOLIO_FALLBACK_USER.plan.label }];
+}
+
+function getPortfolioSeedUser(userId = getActivePortfolioUserId()) {
+  if (portfolioUserStore && typeof portfolioUserStore.getUser === 'function') {
+    return portfolioUserStore.getUser(userId);
+  }
+  return clonePortfolioData(PORTFOLIO_FALLBACK_USER);
+}
+
+function loadPortfolioProfile(userId = getActivePortfolioUserId()) {
+  if (portfolioUserStore && typeof portfolioUserStore.loadProfile === 'function') {
+    return portfolioUserStore.loadProfile(userId);
+  }
+  return clonePortfolioData(PORTFOLIO_FALLBACK_USER.profile);
+}
+
+function loadPortfolioPlan(userId = getActivePortfolioUserId()) {
+  if (portfolioUserStore && typeof portfolioUserStore.loadPlan === 'function') {
+    return portfolioUserStore.loadPlan(userId);
+  }
+  return clonePortfolioData(PORTFOLIO_FALLBACK_USER.plan);
+}
+
+function loadSavedGoals(userId = getActivePortfolioUserId()) {
+  if (portfolioUserStore && typeof portfolioUserStore.loadGoals === 'function') {
+    return portfolioUserStore.loadGoals(userId);
+  }
+  const saved = readPortfolioStorage(STORAGE_KEY_GOALS);
+  if (Array.isArray(saved) && saved.length > 0) return saved;
+  return clonePortfolioData(PORTFOLIO_FALLBACK_USER.goals);
+}
+
+function loadSavedHoldings(userId = getActivePortfolioUserId()) {
+  if (portfolioUserStore && typeof portfolioUserStore.loadHoldings === 'function') {
+    return portfolioUserStore.loadHoldings(userId);
+  }
+  const saved = readPortfolioStorage(STORAGE_KEY_HOLDINGS);
+  if (Array.isArray(saved) && saved.length > 0) return saved;
+  return clonePortfolioData(PORTFOLIO_FALLBACK_USER.holdings);
+}
+
 function saveHoldingsToStorage() {
+  if (portfolioUserStore && typeof portfolioUserStore.saveHoldings === 'function') {
+    portfolioUserStore.saveHoldings(portfolioState.holdings, portfolioState.currentUserId);
+    return;
+  }
   try { localStorage.setItem(STORAGE_KEY_HOLDINGS, JSON.stringify(portfolioState.holdings)); } catch (_) {}
 }
 
 function saveGoalsToStorage() {
+  if (portfolioUserStore && typeof portfolioUserStore.saveGoals === 'function') {
+    portfolioUserStore.saveGoals(portfolioState.goals, portfolioState.currentUserId);
+    return;
+  }
   try { localStorage.setItem(STORAGE_KEY_GOALS, JSON.stringify(portfolioState.goals)); } catch (_) {}
 }
 
-function loadSavedGoals() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_GOALS);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (_) {}
-  return null;
-}
-
-function loadSavedHoldings() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_HOLDINGS);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (_) {}
-  return null;
+function savePlanToStorage() {
+  if (portfolioUserStore && typeof portfolioUserStore.savePlan === 'function') {
+    portfolioUserStore.savePlan(portfolioState.plan, portfolioState.currentUserId);
+  }
 }
 
 const portfolioState = {
-  holdings: loadSavedHoldings() || PORTFOLIO_SEED_HOLDINGS.map((holding) => ({ ...holding })),
-  goals: loadSavedGoals() || DEFAULT_GOALS.map((g) => ({ ...g })),
+  currentUserId: getActivePortfolioUserId(),
+  currentUserProfile: loadPortfolioProfile(getActivePortfolioUserId()),
+  plan: loadPortfolioPlan(getActivePortfolioUserId()),
+  holdings: loadSavedHoldings(getActivePortfolioUserId()),
+  goals: loadSavedGoals(getActivePortfolioUserId()),
   allocationView: 'assetType',
   analysis: null,
   summary: '',
@@ -61,6 +132,17 @@ const portfolioState = {
   isRefreshingSummary: false
 };
 
+function syncPortfolioStateForUser(userId = getActivePortfolioUserId()) {
+  portfolioState.currentUserId = userId;
+  portfolioState.currentUserProfile = loadPortfolioProfile(userId);
+  portfolioState.plan = loadPortfolioPlan(userId);
+  portfolioState.holdings = loadSavedHoldings(userId);
+  portfolioState.goals = loadSavedGoals(userId);
+  portfolioState.summary = '';
+  portfolioState.summarySource = 'local';
+  portfolioState.summaryUpdatedAt = null;
+  portfolioState.isRefreshingSummary = false;
+}
 let portfolioElements = null;
 
 function formatHoldingPeriod(days) {
@@ -279,6 +361,12 @@ function buildLocalPortfolioSummary(analysis) {
 
 function buildPortfolioSummaryPayload(analysis) {
   return {
+    user: {
+      id: portfolioState.currentUserId,
+      profile: portfolioState.currentUserProfile,
+      plan: portfolioState.plan,
+      goals: portfolioState.goals.map((goal) => ({ name: goal.name, targetAmount: Number(goal.targetAmount) || 0, targetYear: goal.targetYear || null }))
+    },
     holdingsCount: analysis.holdings.length,
     totalInvested: Math.round(analysis.totalInvested),
     totalCurrentValue: Math.round(analysis.totalCurrentValue),
@@ -316,6 +404,12 @@ function createPortfolioWorkspace() {
       <div class="portfolio-hero">
         <div class="portfolio-hero-main">
           <div class="portfolio-kicker">Portfolio Intelligence &middot; Wealthtick</div>
+          <div class="portfolio-user-panel">
+            <label class="portfolio-user-label" for="portfolio-user-select">Viewing user</label>
+            <select class="portfolio-user-select" id="portfolio-user-select"></select>
+            <div class="portfolio-user-meta" id="portfolio-user-meta"></div>
+            <div class="portfolio-user-plan" id="portfolio-user-plan"></div>
+          </div>
           <div class="portfolio-hero-value" id="portfolio-hero-value">&#8377;0</div>
           <div class="portfolio-hero-meta">
             <span class="portfolio-hero-day" id="portfolio-hero-day">+&#8377;0 today</span>
@@ -488,6 +582,9 @@ function createPortfolioWorkspace() {
     tableBody: section.querySelector('#portfolio-table-body'),
     tableFoot: section.querySelector('#portfolio-table-foot'),
     redFlagsGrid: section.querySelector('#portfolio-redflags-grid'),
+    userSelect: section.querySelector('#portfolio-user-select'),
+    userMeta: section.querySelector('#portfolio-user-meta'),
+    userPlan: section.querySelector('#portfolio-user-plan'),
     heroValue: section.querySelector('#portfolio-hero-value'),
     heroDay: section.querySelector('#portfolio-hero-day'),
     heroPnl: section.querySelector('#portfolio-hero-pnl'),
@@ -577,8 +674,24 @@ function bindPortfolioWorkspaceEvents() {
     if (actionButton) {
       const action = actionButton.getAttribute('data-portfolio-action');
       if (action === 'reset') {
-        portfolioState.holdings = PORTFOLIO_SEED_HOLDINGS.map((holding) => ({ ...holding }));
-        saveHoldingsToStorage();
+        if (portfolioUserStore && typeof portfolioUserStore.resetUser === 'function') {
+          portfolioUserStore.resetUser(portfolioState.currentUserId);
+        } else {
+          const seed = getPortfolioSeedUser(portfolioState.currentUserId);
+          portfolioState.currentUserProfile = clonePortfolioData(seed.profile);
+          portfolioState.plan = clonePortfolioData(seed.plan);
+          portfolioState.goals = clonePortfolioData(seed.goals);
+          portfolioState.holdings = clonePortfolioData(seed.holdings);
+          saveGoalsToStorage();
+          saveHoldingsToStorage();
+          savePlanToStorage();
+        }
+        syncPortfolioStateForUser(portfolioState.currentUserId);
+        if (typeof window.renderProfile === 'function') {
+          window.renderProfile(portfolioState.currentUserProfile);
+        }
+        renderSidebarGoals();
+        refreshGoalSelect();
         renderPortfolioWorkspace();
         refreshPortfolioSummary();
       }
@@ -621,6 +734,12 @@ function bindPortfolioWorkspaceEvents() {
   });
 
   portfolioElements.root.addEventListener('change', (event) => {
+    const userSelect = event.target.closest('#portfolio-user-select');
+    if (userSelect) {
+      switchPortfolioUser(userSelect.value);
+      return;
+    }
+
     const input = event.target.closest('[data-portfolio-field]');
     if (!input) {
       return;
@@ -640,6 +759,47 @@ function bindPortfolioWorkspaceEvents() {
   });
 }
 
+function renderPortfolioUserContext() {
+  if (!portfolioElements || !portfolioElements.userSelect) return;
+
+  const users = getPortfolioUsers();
+  portfolioElements.userSelect.innerHTML = users.map((user) => {
+    const profile = loadPortfolioProfile(user.id);
+    return `<option value="${escapeHtml(user.id)}"${user.id === portfolioState.currentUserId ? ' selected' : ''}>${escapeHtml(profile.name || user.name)}</option>`;
+  }).join('');
+  portfolioElements.userSelect.value = portfolioState.currentUserId;
+
+  const profile = portfolioState.currentUserProfile || {};
+  const plan = portfolioState.plan || {};
+  const sipText = Number(plan.monthlyInvestment) > 0 ? `${formatCurrency(plan.monthlyInvestment, 0)}/month` : 'SIP not set';
+
+  if (portfolioElements.userMeta) {
+    portfolioElements.userMeta.textContent = `Age ${profile.age || '-'} - ${profile.city || 'City not set'} - ${plan.riskProfile || 'Risk profile pending'}`;
+  }
+  if (portfolioElements.userPlan) {
+    portfolioElements.userPlan.textContent = `${plan.label || 'Plan not set'} - ${sipText} - ${plan.horizon || 'Timeline pending'}`;
+    portfolioElements.userPlan.title = plan.notes || '';
+  }
+}
+
+function switchPortfolioUser(userId) {
+  if (!userId || userId === portfolioState.currentUserId) return;
+
+  if (portfolioUserStore && typeof portfolioUserStore.setActiveUserId === 'function') {
+    portfolioUserStore.setActiveUserId(userId);
+    return;
+  }
+
+  try { localStorage.setItem(STORAGE_KEY_ACTIVE_USER, userId); } catch (_) {}
+  syncPortfolioStateForUser(userId);
+  if (typeof window.renderProfile === 'function') {
+    window.renderProfile(portfolioState.currentUserProfile);
+  }
+  renderSidebarGoals();
+  refreshGoalSelect();
+  renderPortfolioWorkspace();
+  refreshPortfolioSummary();
+}
 function renderPortfolioHero(analysis) {
   if (!portfolioElements.heroValue) return;
   portfolioElements.heroValue.textContent = formatCurrency(analysis.totalCurrentValue, 0);
@@ -740,6 +900,7 @@ function renderPortfolioWorkspace() {
     return;
   }
 
+  renderPortfolioUserContext();
   const analysis = analyzePortfolioHoldings(portfolioState.holdings);
   portfolioState.analysis = analysis;
   renderPortfolioHero(analysis);
@@ -1151,6 +1312,21 @@ function openGoalsEditor() {
   });
 }
 
+window.addEventListener('wealthtick:userChanged', (event) => {
+  const nextUserId = event.detail && event.detail.userId ? event.detail.userId : getActivePortfolioUserId();
+  syncPortfolioStateForUser(nextUserId);
+  renderSidebarGoals();
+  refreshGoalSelect();
+  renderPortfolioWorkspace();
+  refreshPortfolioSummary();
+});
+
+window.addEventListener('wealthtick:profileUpdated', (event) => {
+  const updatedUserId = event.detail && event.detail.userId ? event.detail.userId : portfolioState.currentUserId;
+  if (updatedUserId !== portfolioState.currentUserId) return;
+  portfolioState.currentUserProfile = loadPortfolioProfile(updatedUserId);
+  renderPortfolioUserContext();
+});
 function initPortfolioWorkspace() {
   if (typeof escapeHtml !== 'function' || typeof formatCurrency !== 'function' || typeof formatSignedCurrency !== 'function' || typeof formatSignedPercent !== 'function' || typeof formatPlainNumber !== 'function') {
     return;
@@ -1180,5 +1356,3 @@ window.switchView = function switchView(viewId) {
     views.portfolio.scrollTop = 0;
   }
 };
-
-

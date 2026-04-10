@@ -892,6 +892,7 @@ app.post("/api/portfolio-insights", async (req, res) => {
     "**Quick Take**",
     "One-line overall read on the portfolio's position today.",
     "",
+    "Use the user profile, goals, and plan from the portfolio snapshot when they are provided; keep the advice educational and goal-aware.",
     "Keep total response under 200 words. Do not give buy/sell advice.",
     "",
     `Portfolio snapshot: ${JSON.stringify(portfolioSnapshot)}`,

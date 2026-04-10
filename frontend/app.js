@@ -1187,33 +1187,49 @@ window.addEventListener("resize", () => {
 
 // ─── User Profile Persistence ───────────────────────────────────────────────
 
-const STORAGE_KEY_PROFILE = "wealthtick_profile";
-const DEFAULT_PROFILE = { name: "Arjun Sharma", age: 27, city: "Mumbai" };
+const LEGACY_STORAGE_KEY_PROFILE = "wealthtick_profile";
+const FALLBACK_PROFILE = { name: "Arjun Sharma", age: 27, city: "Mumbai" };
+
+function getUserStore() {
+  return window.WealthtickUsers || null;
+}
 
 function loadProfile() {
+  const userStore = getUserStore();
+  if (userStore && typeof userStore.loadProfile === "function") {
+    return userStore.loadProfile();
+  }
+
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_PROFILE);
+    const saved = localStorage.getItem(LEGACY_STORAGE_KEY_PROFILE);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && parsed.name) return { ...DEFAULT_PROFILE, ...parsed };
+      if (parsed && parsed.name) return { ...FALLBACK_PROFILE, ...parsed };
     }
   } catch (_) {}
-  return { ...DEFAULT_PROFILE };
+  return { ...FALLBACK_PROFILE };
 }
 
 function saveProfile(profile) {
-  try { localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile)); } catch (_) {}
+  const userStore = getUserStore();
+  if (userStore && typeof userStore.saveProfile === "function") {
+    userStore.saveProfile(profile);
+    return;
+  }
+
+  try { localStorage.setItem(LEGACY_STORAGE_KEY_PROFILE, JSON.stringify(profile)); } catch (_) {}
 }
 
 function renderProfile(profile) {
+  const safeProfile = { ...FALLBACK_PROFILE, ...(profile || {}) };
   const nameEl = document.getElementById("profile-name");
   const metaEl = document.getElementById("profile-meta");
   const nameMobileEl = document.getElementById("profile-name-mobile");
   const metaMobileEl = document.getElementById("profile-meta-mobile");
-  const metaText = `Age ${profile.age} - ${profile.city}`;
-  if (nameEl) nameEl.textContent = profile.name;
+  const metaText = `Age ${safeProfile.age} - ${safeProfile.city}`;
+  if (nameEl) nameEl.textContent = safeProfile.name;
   if (metaEl) metaEl.textContent = metaText;
-  if (nameMobileEl) nameMobileEl.textContent = profile.name;
+  if (nameMobileEl) nameMobileEl.textContent = safeProfile.name;
   if (metaMobileEl) metaMobileEl.textContent = metaText;
 }
 
@@ -1271,18 +1287,28 @@ function openProfileEditor(currentProfile) {
   });
 }
 
-// Init profile on page load
+window.renderProfile = renderProfile;
+window.loadProfile = loadProfile;
+
 const _currentProfile = loadProfile();
 renderProfile(_currentProfile);
 
-document.getElementById("profile-edit-btn").addEventListener("click", () => {
-  openProfileEditor(loadProfile());
+window.addEventListener("wealthtick:userChanged", (event) => {
+  renderProfile(event.detail && event.detail.profile ? event.detail.profile : loadProfile());
 });
+window.addEventListener("wealthtick:profileUpdated", (event) => {
+  renderProfile(event.detail && event.detail.profile ? event.detail.profile : loadProfile());
+});
+
+const profileEditBtn = document.getElementById("profile-edit-btn");
+if (profileEditBtn) {
+  profileEditBtn.addEventListener("click", () => {
+    openProfileEditor(loadProfile());
+  });
+}
 
 // Sidebar "Edit" buttons for goals — openGoalsEditor is defined in portfolioModule.js
 ["sidebar-goals-manage-btn", "mobile-goals-manage-btn"].forEach((id) => {
   const btn = document.getElementById(id);
   if (btn) btn.addEventListener("click", () => { if (typeof openGoalsEditor === "function") openGoalsEditor(); });
 });
-
-
